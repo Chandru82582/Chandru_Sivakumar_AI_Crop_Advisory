@@ -9,7 +9,6 @@ Run: python data_ingestion.py
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Optional
 import pandas as pd
 from dotenv import load_dotenv
 
