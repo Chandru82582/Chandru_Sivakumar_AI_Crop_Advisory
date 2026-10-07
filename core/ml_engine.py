@@ -5,7 +5,7 @@ Provides predictions with confidence bounds and feature attribution.
 """
 import joblib
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any
 import numpy as np
 import pandas as pd
 

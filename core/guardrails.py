@@ -1,5 +1,4 @@
 """Safety guardrails and validation for the advisory system."""
-from typing import Any, Optional
 
 
 class AdvisoryGuardrails:

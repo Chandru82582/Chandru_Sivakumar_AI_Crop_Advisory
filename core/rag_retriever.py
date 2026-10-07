@@ -4,7 +4,6 @@ Implements hybrid retrieval combining BM25 sparse retrieval and dense vector sea
 Uses HuggingFace embeddings and Chroma vector store.
 """
 from pathlib import Path
-from typing import Optional
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
