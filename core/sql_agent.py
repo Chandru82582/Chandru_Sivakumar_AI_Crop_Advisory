@@ -5,7 +5,7 @@ Manages SQLite database for crop history and farm operations.
 """
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from langchain_community.utilities import SQLDatabase
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import create_sql_query_chain
