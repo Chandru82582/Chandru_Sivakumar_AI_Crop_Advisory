@@ -17,6 +17,10 @@ from typing import Optional
 import requests
 import json
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from core.ml_engine import MLEngine
 from core.rag_retriever import RAGRetriever
 from core.sql_agent import FarmHistoryAgent

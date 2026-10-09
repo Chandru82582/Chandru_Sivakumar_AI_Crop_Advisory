@@ -13,7 +13,11 @@ from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
     PageBreak, Image, KeepTogether
 )
-from reportlab.enum.text import TA_CENTER, TA_LEFT, TA_JUSTIFY
+try:
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+except ImportError:
+    from reportlab.enum.text import TA_CENTER, TA_LEFT, TA_JUSTIFY
+
 from reportlab.pdfgen import canvas
 
 

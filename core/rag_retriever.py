@@ -9,7 +9,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
+try:
+    from langchain.retrievers import EnsembleRetriever
+except ImportError:
+    from langchain_classic.retrievers import EnsembleRetriever
+
 
 
 class RAGRetriever:
@@ -104,14 +108,26 @@ class RAGRetriever:
             embedding=self.embeddings,
             persist_directory=str(self.chroma_path)
         )
-        self.vectorstore.persist()
+        if hasattr(self.vectorstore, "persist"):
+            self.vectorstore.persist()
 
     def _load_vectorstore(self) -> None:
-        """Load existing Chroma vector store."""
+        """Load existing Chroma vector store and setup retrievers."""
         self.vectorstore = Chroma(
             embedding_function=self.embeddings,
             persist_directory=str(self.chroma_path)
         )
+        try:
+            docs = self._load_documents()
+            if docs:
+                chunks = self._chunk_documents(docs)
+                self._create_bm25_retriever(chunks)
+                self._create_ensemble_retriever()
+                return
+        except Exception:
+            pass
+
+        self.ensemble_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
 
     def _create_bm25_retriever(self, chunks: list) -> None:
         """Create BM25 sparse retriever.

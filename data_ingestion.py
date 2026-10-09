@@ -102,7 +102,8 @@ class DataIngestionPipeline:
                 embedding=self.embeddings,
                 persist_directory=str(self.chroma_path)
             )
-            vectorstore.persist()
+            if hasattr(vectorstore, "persist"):
+                vectorstore.persist()
             logger.info(f"Stored {len(chunks)} chunks in ChromaDB at {self.chroma_path}")
 
         except Exception as e:
