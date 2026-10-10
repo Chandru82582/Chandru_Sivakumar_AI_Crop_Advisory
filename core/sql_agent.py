@@ -34,7 +34,7 @@ class FarmHistoryAgent:
         if api_key:
             os.environ["GOOGLE_API_KEY"] = api_key
             try:
-                self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
+                self.llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=api_key)
             except Exception:
                 self.llm = None
         else:

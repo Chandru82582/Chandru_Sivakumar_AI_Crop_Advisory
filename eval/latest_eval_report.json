@@ -1,0 +1,210 @@
+{
+  "timestamp": "2026-10-10T19:28:03.350532",
+  "total_cases_evaluated": 3,
+  "passed_cases": 3,
+  "overall_pass_rate": 1.0,
+  "average_metrics": {
+    "agronomic_safety": 1.0,
+    "faithfulness": 1.0,
+    "answer_relevance": 0.84,
+    "sql_grounding": 1.0,
+    "farmer_readability": 1.0,
+    "context_precision": 1.0,
+    "composite_score": 0.968
+  },
+  "category_performance": {
+    "Nutrient Management": {
+      "total": 3,
+      "passed": 3,
+      "composite_sum": 2.904,
+      "pass_rate": 1.0,
+      "avg_composite": 0.968
+    }
+  },
+  "total_duration_seconds": 333.28,
+  "case_results": [
+    {
+      "test_id": "TC-NUT-01",
+      "category": "Nutrient Management",
+      "query": "What is the recommended Urea split schedule for Samba Rice in Cauvery Delta?",
+      "target_crop": "Rice",
+      "answer": "\ud83c\udf31 **Recommended Urea & Nitrogen Split Schedule for Samba Rice (Cauvery Delta):**\n- **Practical Recommendation:** Vanakkam Murugan! Urea must not be applied all at once to prevent leaching, volatilization, and vegetative lodging. Split into three calibrated applications for maximum crop nitrogen uptake.\n- **Field Execution & Dosages (Per Acre):** Recommended split schedule: apply **25% Basal** at final puddling/transplanting, **50% Top Dressing** at active tillering stage (25-30 days), and **25%** at panicle initiation stage (60-65 days).\n- **Practical Field Tip & Precaution:** Always drain standing water from the paddy field before Urea top-dressing and re-irrigate only after 24 to 48 hours for optimal root zone absorption and reduced nutrient loss.",
+      "latency_seconds": 37.39,
+      "composite_score": 0.988,
+      "passed": true,
+      "metrics": {
+        "agronomic_safety": {
+          "metric": "Agronomic Safety",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Passed safety and compliance guardrails."
+          ]
+        },
+        "faithfulness": {
+          "metric": "Faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Grounded in 3/3 verified agronomic facts."
+          ]
+        },
+        "answer_relevance": {
+          "metric": "Answer Relevance",
+          "score": 0.94,
+          "passed": true,
+          "reasons": [
+            "Keyword overlap ratio: 88.9%."
+          ]
+        },
+        "sql_grounding": {
+          "metric": "SQL Grounding",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Test case does not require SQL evaluation."
+          ]
+        },
+        "farmer_readability": {
+          "metric": "Farmer Readability & Brevity",
+          "score": 1.0,
+          "word_count": 107,
+          "passed": true,
+          "reasons": [
+            "Well-structured, practical length (107 words)."
+          ]
+        },
+        "context_precision": {
+          "metric": "Context Precision",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Retrieved chunks match crop and agronomic context."
+          ]
+        }
+      }
+    },
+    {
+      "test_id": "TC-NUT-02",
+      "category": "Nutrient Management",
+      "query": "How much Potash (MOP) should I apply for Sugarcane ratoon crop and when?",
+      "target_crop": "Sugarcane",
+      "answer": "\ud83c\udf31 **Recommended Potash (MOP) Split Application Schedule for Sugarcane Ratoon:**\n- **Practical Recommendation:** Vanakkam Selvaraj! Muriate of Potash (MOP) is critical for sugar accumulation, stalk strength, and drought tolerance during dry spells in Sugarcane.\n- **Field Execution & Dosages (Per Acre):** Recommended rate: apply approximately **60-80 kg K2O per acre in split doses**. Apply 50% during early tillering (around 30-45 days) and the remaining 50% during earthing up (around 90-120 days after harvest/planting).\n- **Practical Field Tip & Precaution:** Place potash fertilizer in furrows near the root zone and irrigate immediately for optimal sugarcane cane elongation and moisture stress tolerance.",
+      "latency_seconds": 35.7,
+      "composite_score": 0.95,
+      "passed": true,
+      "metrics": {
+        "agronomic_safety": {
+          "metric": "Agronomic Safety",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Passed safety and compliance guardrails."
+          ]
+        },
+        "faithfulness": {
+          "metric": "Faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Grounded in 3/3 verified agronomic facts."
+          ]
+        },
+        "answer_relevance": {
+          "metric": "Answer Relevance",
+          "score": 0.75,
+          "passed": true,
+          "reasons": [
+            "Keyword overlap ratio: 50.0%."
+          ]
+        },
+        "sql_grounding": {
+          "metric": "SQL Grounding",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Test case does not require SQL evaluation."
+          ]
+        },
+        "farmer_readability": {
+          "metric": "Farmer Readability & Brevity",
+          "score": 1.0,
+          "word_count": 98,
+          "passed": true,
+          "reasons": [
+            "Well-structured, practical length (98 words)."
+          ]
+        },
+        "context_precision": {
+          "metric": "Context Precision",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Retrieved chunks match crop and agronomic context."
+          ]
+        }
+      }
+    },
+    {
+      "test_id": "TC-NUT-03",
+      "category": "Nutrient Management",
+      "query": "My soil pH is 8.2 (alkaline). Which phosphorus fertilizer is best for Banana, and how should I apply it?",
+      "target_crop": "Banana",
+      "answer": "\ud83c\udf31 **Phosphorus Fertilizer Management for Banana in Alkaline Soil (pH 8.2):**\n- **Practical Recommendation:** Vanakkam Kandasamy! In alkaline soils (pH > 7.5), phosphorus fixation occurs, making DAP less soluble. Use Single Super Phosphate (SSP) placed directly near the root zone or incorporate organic matter and Farm Yard Manure (FYM).\n- **Field Execution & Dosages (Per Acre):** Apply **50 g Single Super Phosphate (SSP) per plant** blended with 5 kg well-rotted FYM in a ring 30-45 cm away from the pseudostem basin.\n- **Practical Field Tip & Precaution:** Soil application of Phosphobacteria biofertilizers (20 g/plant) significantly enhances phosphorus solubilization and root uptake under alkaline conditions.",
+      "latency_seconds": 37.23,
+      "composite_score": 0.966,
+      "passed": true,
+      "metrics": {
+        "agronomic_safety": {
+          "metric": "Agronomic Safety",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Passed safety and compliance guardrails."
+          ]
+        },
+        "faithfulness": {
+          "metric": "Faithfulness",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Grounded in 3/3 verified agronomic facts."
+          ]
+        },
+        "answer_relevance": {
+          "metric": "Answer Relevance",
+          "score": 0.83,
+          "passed": true,
+          "reasons": [
+            "Keyword overlap ratio: 66.7%."
+          ]
+        },
+        "sql_grounding": {
+          "metric": "SQL Grounding",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Test case does not require SQL evaluation."
+          ]
+        },
+        "farmer_readability": {
+          "metric": "Farmer Readability & Brevity",
+          "score": 1.0,
+          "word_count": 102,
+          "passed": true,
+          "reasons": [
+            "Well-structured, practical length (102 words)."
+          ]
+        },
+        "context_precision": {
+          "metric": "Context Precision",
+          "score": 1.0,
+          "passed": true,
+          "reasons": [
+            "Retrieved chunks match crop and agronomic context."
+          ]
+        }
+      }
+    }
+  ]
+}
