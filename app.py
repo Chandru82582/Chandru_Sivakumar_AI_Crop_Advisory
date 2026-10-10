@@ -18,6 +18,8 @@ import re
 import json
 import sqlite3
 import calendar
+import html
+import textwrap
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional, Any
@@ -891,18 +893,7 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
             with kpi4:
-                # PDF Generation compiled fast on demand
-                timetable_for_pdf = [
-                    {
-                        "phase": e["phase"],
-                        "duration": f"Day {e['day_offset']:+d} ({e['date'].strftime('%b %d')})",
-                        "tasks": [f"{e['what']}: {e['dosage']}"],
-                        "organic": e["organic"],
-                        "chemical": e["chemical"]
-                    }
-                    for e in calendar_events[:6]
-                ]
-
+                # PDF Generation compiled fast on demand with complete 18-stage operational checklist
                 pdf_buffer = components["pdf_builder"].generate_advisory_pdf(
                     farmer_name=farmer_name,
                     location=location,
@@ -913,10 +904,10 @@ def main():
                         "confidence": confidence,
                         "alternative_crops": [p["crop"] for p in alternatives],
                         "advisory": adv_text,
-                        "timetable": timetable_for_pdf
+                        "timetable": calendar_events
                     },
                     ml_metrics={"predictions": prediction.get("predictions", [])},
-                    timetable_data=timetable_for_pdf,
+                    timetable_data=calendar_events,
                     companion_data=companion_text
                 )
 
@@ -1020,7 +1011,7 @@ def main():
             """, unsafe_allow_html=True)
 
             # Top Controls
-            ctrl1, ctrl2, ctrl3 = st.columns([1.2, 1.4, 1.4])
+            ctrl1, ctrl2 = st.columns([1.2, 1.8])
             with ctrl1:
                 selected_sowing_date = st.date_input(
                     "🌾 Sowing / Cycle Start Date:",
@@ -1028,13 +1019,6 @@ def main():
                     key="cal_sowing_date_picker"
                 )
             with ctrl2:
-                calendar_view_mode = st.radio(
-                    "📅 Calendar View Mode:",
-                    ["📆 Monthly Calendar View", "🗓️ Weekly Stage Progression", "📋 Daily Farmer Action Checklist"],
-                    horizontal=True,
-                    key="cal_view_mode_radio"
-                )
-            with ctrl3:
                 treatment_mode = st.radio(
                     "🌿 Agronomic Protocol:",
                     ["Integrated Pest Management (IPM) ⚖️", "Organic & Regenerative 🌱", "Conventional / Chemical ⚗️"],
@@ -1050,11 +1034,11 @@ def main():
                 sowing_date=selected_sowing_date
             )
 
-            # Progress Tracking
+            # Progress Tracking (Synced with unique task keys)
             total_tasks = len(all_events)
             completed_tasks = 0
             for ev in all_events:
-                t_key = f"cal_task_{top_crop}_{ev['day_offset']}"
+                t_key = f"chk_op_done_{top_crop}_{ev['day_offset']}"
                 if t_key not in st.session_state:
                     st.session_state[t_key] = (ev["day_offset"] <= -7)
                 if st.session_state.get(t_key, False):
@@ -1072,13 +1056,24 @@ def main():
             """, unsafe_allow_html=True)
             st.progress(progress_pct)
 
-            col_calendar_main, col_companion = st.columns([1.6, 1], gap="medium")
+            # Two-Column Layout: Calendar on Left, Checklist on Right
+            col_calendar, col_checklist = st.columns([1.35, 1.25], gap="large")
 
-            with col_calendar_main:
-                # -------------------------------------------------------------
-                # 1. FIXED-WIDTH ROCK-SOLID MONTHLY CALENDAR TABLE
-                # -------------------------------------------------------------
-                if calendar_view_mode == "📆 Monthly Calendar View":
+            # =================================================================
+            # LEFT COLUMN: CULTIVATION CALENDAR WITH VIEW SELECTION ABOVE
+            # =================================================================
+            with col_calendar:
+                st.markdown(f"<h4 style='color:{PRIMARY};margin-bottom:0.4rem;'>📅 Cultivation Calendar & Milestones</h4>", unsafe_allow_html=True)
+
+                # View selector placed just above the calendar as requested
+                cal_view_mode = st.radio(
+                    "📅 Select Calendar View Mode:",
+                    ["📆 Monthly Calendar", "🗓️ Weekly Progression", "📋 Daily Stage Overview"],
+                    horizontal=True,
+                    key="cal_view_mode_selector_radio"
+                )
+
+                if cal_view_mode == "📆 Monthly Calendar":
                     month_map = {}
                     for ev in all_events:
                         ym = (ev["date"].year, ev["date"].month)
@@ -1088,7 +1083,7 @@ def main():
 
                     month_keys = sorted(month_map.keys())
                     month_options = [
-                        f"{calendar.month_name[m]} {y} ({len(month_map[(y, m)])} Operations Scheduled)"
+                        f"{calendar.month_name[m]} {y} ({len(month_map[(y, m)])} Operations)"
                         for y, m in month_keys
                     ]
 
@@ -1103,101 +1098,81 @@ def main():
                     month_events = month_map[(chosen_y, chosen_m)]
                     events_by_day = {e["date"].day: e for e in month_events}
 
-                    # Render Fixed-Layout HTML Table (Never collapses on any device!)
+                    # Render Fixed-Layout HTML Table (Clean string with zero indentation issues)
                     cal_matrix = calendar.monthcalendar(chosen_y, chosen_m)
-                    
                     rows_html = []
                     for week in cal_matrix:
                         tds_html = []
                         for day_num in week:
                             if day_num == 0:
-                                tds_html.append("<td style='background:#F8FAFC;border:1px solid #E2E8F0;padding:6px;height:82px;vertical-align:top;'></td>")
+                                tds_html.append("<td style='background:#F8FAFC;border:1px solid #E2E8F0;padding:6px;height:78px;vertical-align:top;'></td>")
                             elif day_num in events_by_day:
                                 ev_m = events_by_day[day_num]
-                                is_d = st.session_state.get(f"cal_task_{top_crop}_{ev_m['day_offset']}", False)
+                                is_d = st.session_state.get(f"chk_op_done_{top_crop}_{ev_m['day_offset']}", False)
                                 done_tag = "✅ Done" if is_d else "⏳ Action"
-                                badge_bg = "#1B4D3E" if not is_d else "#2D6A4F"
-                                
-                                tds_html.append(f"""
-                                <td style='background:#F0FDF4;border:1.5px solid #52B788;padding:6px;height:82px;vertical-align:top;'>
-                                    <div style='display:flex;justify-content:space-between;align-items:center;'>
-                                        <span style='font-weight:800;color:#1B4D3E;font-size:0.92rem;'>{day_num}</span>
-                                        <span style='font-size:0.68rem;background:#DCFCE7;color:#166534;font-weight:700;padding:1px 4px;border-radius:4px;'>{done_tag}</span>
-                                    </div>
-                                    <div style='background:{badge_bg};color:white;padding:3px 5px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-top:4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' title='{ev_m['what']}'>
-                                        {ev_m['stage']}
-                                    </div>
-                                </td>
-                                """)
+                                badge_bg = "#2D6A4F" if is_d else "#1B4D3E"
+                                stg = html.escape(ev_m['stage'])
+                                wht = html.escape(ev_m['what'])
+                                tds_html.append(
+                                    f"<td style='background:#F0FDF4;border:1.5px solid #52B788;padding:6px;height:78px;vertical-align:top;'>"
+                                    f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                                    f"<span style='font-weight:800;color:#1B4D3E;font-size:0.92rem;'>{day_num}</span>"
+                                    f"<span style='font-size:0.68rem;background:#DCFCE7;color:#166534;font-weight:700;padding:1px 4px;border-radius:4px;'>{done_tag}</span>"
+                                    f"</div>"
+                                    f"<div style='background:{badge_bg};color:white;padding:3px 5px;border-radius:4px;font-size:0.7rem;font-weight:600;margin-top:4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' title='{wht}'>"
+                                    f"{stg}</div>"
+                                    f"</td>"
+                                )
                             else:
-                                tds_html.append(f"""
-                                <td style='background:white;border:1px solid #E2E8F0;padding:6px;height:82px;vertical-align:top;'>
-                                    <div style='font-weight:700;color:#64748B;font-size:0.85rem;'>{day_num}</div>
-                                </td>
-                                """)
+                                tds_html.append(
+                                    f"<td style='background:white;border:1px solid #E2E8F0;padding:6px;height:78px;vertical-align:top;'>"
+                                    f"<div style='font-weight:700;color:#64748B;font-size:0.85rem;'>{day_num}</div>"
+                                    f"</td>"
+                                )
                         rows_html.append(f"<tr>{''.join(tds_html)}</tr>")
 
-                    table_calendar_html = f"""
-                    <div style="margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,0.04);border-radius:10px;overflow:hidden;border:1px solid #CBD5E1;">
-                        <div style="background:linear-gradient(135deg, {PRIMARY}, {SECONDARY});color:white;padding:10px 16px;font-weight:700;font-size:1.05rem;">
-                            📅 {calendar.month_name[chosen_m]} {chosen_y} — Cropping Schedule
-                        </div>
-                        <table style="width:100%;border-collapse:collapse;table-layout:fixed;background:white;">
-                            <thead>
-                                <tr style="background:#E8F5E9;color:{PRIMARY};font-weight:700;font-size:0.82rem;text-align:center;">
-                                    <th style="padding:8px 2px;width:14.28%;">Mon</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Tue</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Wed</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Thu</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Fri</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Sat</th>
-                                    <th style="padding:8px 2px;width:14.28%;">Sun</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {''.join(rows_html)}
-                            </tbody>
-                        </table>
-                    </div>
-                    """
-                    st.markdown(table_calendar_html, unsafe_allow_html=True)
+                    table_calendar_html = (
+                        f"<div style='margin-bottom:1.2rem;box-shadow:0 2px 10px rgba(0,0,0,0.04);border-radius:10px;overflow:hidden;border:1px solid #CBD5E1;'>"
+                        f"<div style='background:linear-gradient(135deg, {PRIMARY}, {SECONDARY});color:white;padding:10px 16px;font-weight:700;font-size:1.02rem;'>"
+                        f"📅 {calendar.month_name[chosen_m]} {chosen_y} — Cropping Schedule"
+                        f"</div>"
+                        f"<table style='width:100%;border-collapse:collapse;table-layout:fixed;background:white;'>"
+                        f"<thead><tr style='background:#E8F5E9;color:{PRIMARY};font-weight:700;font-size:0.82rem;text-align:center;'>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Mon</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Tue</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Wed</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Thu</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Fri</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Sat</th>"
+                        f"<th style='padding:8px 2px;width:14.28%;'>Sun</th>"
+                        f"</tr></thead>"
+                        f"<tbody>{''.join(rows_html)}</tbody>"
+                        f"</table>"
+                        f"</div>"
+                    )
+                    st.html(table_calendar_html)
 
-                    # Interactive Highly Detailed Action Cards for Month
-                    st.markdown(f"#### 📋 Farmer's Operational Action Cards for {calendar.month_name[chosen_m]} {chosen_y}")
+                    # Summary cards for the selected month (No duplicate checkboxes)
+                    st.markdown(f"**📌 Milestones Scheduled in {calendar.month_name[chosen_m]} {chosen_y}:**")
                     for ev in month_events:
-                        t_key = f"cal_task_{top_crop}_{ev['day_offset']}"
-                        is_done = st.session_state.get(t_key, False)
-                        p_badge_bg = "#FEE2E2" if ev["priority"] == "Critical" else "#FEF3C7" if ev["priority"] == "High" else "#E0F2FE"
-                        p_badge_col = "#991B1B" if ev["priority"] == "Critical" else "#92400E" if ev["priority"] == "High" else "#075985"
+                        is_m_done = st.session_state.get(f"chk_op_done_{top_crop}_{ev['day_offset']}", False)
+                        d_badge = "✅ Completed" if is_m_done else "⏳ Action Pending"
+                        d_badge_bg = "#DCFCE7" if is_m_done else "#FEF3C7"
+                        d_badge_col = "#166534" if is_m_done else "#92400E"
+                        p_col = "#991B1B" if ev["priority"] == "Critical" else "#1B4D3E"
 
-                        with st.expander(f"📍 {ev['when']} ({ev['date'].strftime('%a, %b %d')}) — {ev['what']}", expanded=(not is_done)):
-                            c_chk, c_body = st.columns([1, 4])
-                            with c_chk:
-                                st.checkbox("Mark Done", key=t_key)
-                                st.markdown(f"""
-                                <span style='background:{p_badge_bg};color:{p_badge_col};padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;'>
-                                    {ev['priority']} Priority
-                                </span>
-                                """, unsafe_allow_html=True)
-                            with c_body:
-                                st.markdown(f"**Stage:** `{ev['stage']}` • **Category:** `{ev['category']}`")
-                                st.markdown(f"**🎯 Exact Dosages & Materials:**  \n{ev['dosage']}")
-                                st.markdown(f"**🛠️ Step-by-Step Instructions (HOW):**  \n{ev['how']}")
+                        st.html(
+                            f"<div style='background:white;border:1px solid #E2E8F0;border-left:4px solid {p_col};border-radius:6px;padding:8px 12px;margin-bottom:6px;'>"
+                            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                            f"<div><b style='color:{PRIMARY};'>{ev['when']}</b> ({ev['date'].strftime('%a, %b %d')}): <b>{ev['what']}</b></div>"
+                            f"<span style='font-size:0.72rem;background:{d_badge_bg};color:{d_badge_col};padding:2px 6px;border-radius:4px;font-weight:700;'>{d_badge}</span>"
+                            f"</div>"
+                            f"<div style='font-size:0.78rem;color:#166534;margin-top:3px;'><b>Dosage:</b> {ev['dosage']}</div>"
+                            f"</div>"
+                        )
 
-                                if "Organic" in treatment_mode:
-                                    st.info(f"🌱 **Organic Method:** {ev['organic']}")
-                                elif "Chemical" in treatment_mode:
-                                    st.warning(f"⚗️ **Chemical Treatment:** {ev['chemical']}")
-                                else:
-                                    st.success(f"⚖️ **IPM Recommended:** {ev['organic']}\n\n*Chemical Backup:* {ev['chemical']}")
-
-                # -------------------------------------------------------------
-                # 2. WEEKLY STAGE PROGRESSION
-                # -------------------------------------------------------------
-                elif calendar_view_mode == "🗓️ Weekly Stage Progression":
-                    st.markdown("#### 🗓️ Weekly Chronological Sprint Cards")
-                    st.caption("Step-by-step weekly guides covering land prep, vegetative care, flowering, and harvest.")
-
+                elif cal_view_mode == "🗓️ Weekly Progression":
+                    st.caption("Chronological weekly stages from land preparation through harvest:")
                     weekly_groups = [
                         ("Pre-Season Week -2 (Day -14 to -8)", [e for e in all_events if -14 <= e["day_offset"] <= -8]),
                         ("Pre-Season Week -1 (Day -7 to -1)", [e for e in all_events if -7 <= e["day_offset"] <= -1]),
@@ -1217,89 +1192,90 @@ def main():
                     for w_idx, (w_title, w_events) in enumerate(weekly_groups):
                         if not w_events:
                             continue
-
-                        w_done = all(st.session_state.get(f"cal_task_{top_crop}_{e['day_offset']}", False) for e in w_events)
+                        w_done = all(st.session_state.get(f"chk_op_done_{top_crop}_{e['day_offset']}", False) for e in w_events)
                         w_badge = "✅ Completed" if w_done else "⏳ Pending Action"
                         w_badge_bg = "#E8F5E9" if w_done else "#FEF3C7"
                         w_badge_col = PRIMARY if w_done else "#92400E"
-
                         date_span = f"{w_events[0]['date'].strftime('%b %d')} — {w_events[-1]['date'].strftime('%b %d')}"
 
                         with st.expander(f"📆 {w_title} [{date_span}]", expanded=(w_idx == 2 or (not w_done and w_idx < 4))):
-                            st.markdown(f"<span style='background:{w_badge_bg};color:{w_badge_col};padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;'>{w_badge}</span>", unsafe_allow_html=True)
-                            st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
-
+                            st.html(f"<span style='background:{w_badge_bg};color:{w_badge_col};padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;'>{w_badge}</span>")
                             for ev in w_events:
-                                t_key = f"cal_task_{top_crop}_{ev['day_offset']}"
-                                c_chk, c_body = st.columns([0.8, 4])
-                                with c_chk:
-                                    st.checkbox(f"Day {ev['day_offset']:+d}", key=t_key)
-                                with c_body:
-                                    st.markdown(f"**{ev['what']}** ({ev['date'].strftime('%a, %d %b')})")
-                                    st.caption(f"**Dosage:** {ev['dosage']}")
-                                    st.caption(f"**How:** {ev['how']}")
+                                st.markdown(f"**{ev['what']}** ({ev['date'].strftime('%a, %d %b')})")
+                                st.caption(f"**Dosage:** {ev['dosage']} | **How:** {ev['how']}")
 
-                # -------------------------------------------------------------
-                # 3. DAILY FARMER ACTION CHECKLIST
-                # -------------------------------------------------------------
+                else:  # Daily Stage Overview
+                    st.caption(f"Chronological timeline overview for {top_crop} across all 18 lifecycle milestones:")
+                    for ev in all_events:
+                        is_d = st.session_state.get(f"chk_op_done_{top_crop}_{ev['day_offset']}", False)
+                        d_badge = "✅ Completed" if is_d else "⏳ Pending"
+                        d_bg = "#DCFCE7" if is_d else "#F1F5F9"
+                        p_col = "#991B1B" if ev["priority"] == "Critical" else "#1B4D3E"
+                        st.html(
+                            f"<div style='background:white;border:1px solid #E2E8F0;border-left:4px solid {p_col};border-radius:6px;padding:8px 12px;margin-bottom:6px;'>"
+                            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                            f"<div><b style='color:{PRIMARY};'>{ev['when']}</b> ({ev['date'].strftime('%a, %d %b %Y')}) — <b>{ev['stage']}</b></div>"
+                            f"<span style='font-size:0.72rem;background:{d_bg};padding:2px 6px;border-radius:4px;font-weight:700;'>{d_badge}</span>"
+                            f"</div>"
+                            f"<div style='font-size:0.85rem;color:{TEXT_MAIN};margin-top:2px;'>{ev['what']}</div>"
+                            f"<div style='font-size:0.78rem;color:#166534;margin-top:2px;'><b>Dosage:</b> {ev['dosage']}</div>"
+                            f"</div>"
+                        )
+
+            # =================================================================
+            # RIGHT COLUMN: INTERACTIVE FARMER ACTION CHECKLIST
+            # =================================================================
+            with col_checklist:
+                st.markdown(f"<h4 style='color:{PRIMARY};margin-bottom:0.4rem;'>📋 Operational Action Checklist</h4>", unsafe_allow_html=True)
+                st.caption(f"Track operations for **{top_crop}** ({season}) with exact dosages per acre/ha.")
+
+                f_col1, f_col2 = st.columns(2)
+                with f_col1:
+                    status_filter = st.selectbox("Filter Status:", ["All Operations", "Pending Tasks Only", "Completed Tasks Only"], key="chk_filter_status_sel")
+                with f_col2:
+                    cat_filter = st.selectbox("Filter Category:", ["All Categories", "Nutrition", "Weed Management", "Irrigation", "Pest & Disease Defense", "Harvesting & Storage", "Soil & Land Prep", "Sowing"], key="chk_filter_cat_sel")
+
+                filtered_events = all_events
+                if status_filter == "Pending Tasks Only":
+                    filtered_events = [e for e in filtered_events if not st.session_state.get(f"chk_op_done_{top_crop}_{e['day_offset']}", False)]
+                elif status_filter == "Completed Tasks Only":
+                    filtered_events = [e for e in filtered_events if st.session_state.get(f"chk_op_done_{top_crop}_{e['day_offset']}", False)]
+
+                if cat_filter != "All Categories":
+                    filtered_events = [e for e in filtered_events if e["category"].lower() == cat_filter.lower()]
+
+                if not filtered_events:
+                    st.info("No operations match the selected filters.")
                 else:
-                    st.markdown("#### 📋 Highly Detailed Farmer Action Checklist (When, What, How)")
-                    st.caption("Complete operational roadmap from pre-planting through harvesting.")
+                    for ev in filtered_events:
+                        t_key = f"chk_op_done_{top_crop}_{ev['day_offset']}"
+                        is_done = st.session_state.get(t_key, False)
+                        p_col = "#991B1B" if ev["priority"] == "Critical" else "#1B4D3E"
+                        border_col = "#10B981" if is_done else "#CBD5E1"
+                        bg_col = "#F0FDF4" if is_done else "white"
+                        done_lbl = "✅ Completed" if is_done else "⏳ Pending Action"
 
-                    f_col1, f_col2 = st.columns(2)
-                    with f_col1:
-                        status_filter = st.selectbox("Filter Status:", ["All Operations", "Pending Tasks Only", "Completed Tasks Only"], key="chk_status_sel")
-                    with f_col2:
-                        cat_filter = st.selectbox("Filter Category:", ["All Categories", "Nutrition", "Weed Management", "Irrigation", "Pest & Disease Defense", "Harvesting & Storage", "Soil & Land Prep", "Sowing"], key="chk_cat_sel")
+                        st.html(
+                            f"<div style='background:{bg_col};border:1px solid {border_col};border-left:5px solid {p_col};border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.03);'>"
+                            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                            f"<div>"
+                            f"<span style='font-weight:700;color:{PRIMARY};font-size:0.92rem;'>{ev['when']} — {ev['date'].strftime('%a, %d %b %Y')}</span>"
+                            f"<span style='background:#F1F5F9;color:{TEXT_MUTED};padding:2px 8px;border-radius:4px;font-size:0.75rem;margin-left:8px;font-weight:600;'>{ev['category']}</span>"
+                            f"</div>"
+                            f"<span style='font-size:0.75rem;font-weight:700;color:{p_col};padding:2px 6px;border-radius:4px;background:#FEE2E2;'>{ev['priority']} Priority • {done_lbl}</span>"
+                            f"</div>"
+                            f"<div style='font-weight:700;color:{TEXT_MAIN};margin-top:6px;font-size:0.98rem;'>{ev['what']}</div>"
+                            f"<div style='font-size:0.83rem;color:#166534;background:#F0FDF4;padding:6px 10px;border-radius:6px;margin-top:6px;border:1px solid #BBF7D0;'>"
+                            f"<b>🎯 Exact Dosages:</b> {ev['dosage']}</div>"
+                            f"<div style='font-size:0.83rem;color:{TEXT_MAIN};margin-top:6px;'><b>🛠️ Instructions (HOW):</b> {ev['how']}</div>"
+                            f"</div>"
+                        )
+                        st.checkbox(f"Mark Completed: {ev['when']}", key=t_key)
 
-                    filtered_events = all_events
-                    if status_filter == "Pending Tasks Only":
-                        filtered_events = [e for e in filtered_events if not st.session_state.get(f"cal_task_{top_crop}_{e['day_offset']}", False)]
-                    elif status_filter == "Completed Tasks Only":
-                        filtered_events = [e for e in filtered_events if st.session_state.get(f"cal_task_{top_crop}_{e['day_offset']}", False)]
-
-                    if cat_filter != "All Categories":
-                        filtered_events = [e for e in filtered_events if e["category"].lower() == cat_filter.lower()]
-
-                    if not filtered_events:
-                        st.info("No operations match the selected filters.")
-                    else:
-                        for ev in filtered_events:
-                            t_key = f"cal_task_{top_crop}_{ev['day_offset']}"
-                            is_done = st.session_state.get(t_key, False)
-                            p_col = "#991B1B" if ev["priority"] == "Critical" else "#1B4D3E"
-
-                            with st.container():
-                                st.markdown(f"""
-                                <div style="background:white;border:1px solid {BORDER_COLOR};border-left:5px solid {p_col};border-radius:8px;padding:1rem;margin-bottom:0.75rem;">
-                                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                                        <div>
-                                            <span style="font-weight:700;color:{PRIMARY};font-size:0.95rem;">{ev['when']} — {ev['date'].strftime('%a, %d %b %Y')}</span>
-                                            <span style="background:#F1F5F9;color:{TEXT_MUTED};padding:2px 8px;border-radius:4px;font-size:0.75rem;margin-left:8px;font-weight:600;">{ev['category']}</span>
-                                        </div>
-                                        <span style="font-size:0.8rem;font-weight:700;color:{p_col};">{ev['priority']} Priority</span>
-                                    </div>
-                                    <div style="font-weight:700;color:{TEXT_MAIN};margin-top:0.4rem;font-size:1.02rem;">{ev['what']}</div>
-                                    <div style="font-size:0.85rem;color:#166534;background:#F0FDF4;padding:6px 10px;border-radius:6px;margin-top:0.4rem;border:1px solid #BBF7D0;">
-                                        <b>🎯 Exact Dosages:</b> {ev['dosage']}
-                                    </div>
-                                    <div style="font-size:0.85rem;color:{TEXT_MAIN};margin-top:0.4rem;">
-                                        <b>🛠️ Action Guide (HOW):</b> {ev['how']}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                st.checkbox(f"Mark Operation Completed ({ev['when']})", key=t_key)
-
-            with col_companion:
-                st.markdown(f"""
-                <div class="content-panel">
-                    <div class="panel-header">🌿 Companion Crops & Intercropping Hub</div>
-                    <p style="color:{TEXT_MUTED};font-size:0.88rem;">
-                        Agro-ecological biological synergy matrix for <b>{top_crop}</b> in <b>Tamil Nadu</b> to boost pest deterrence and land utilization.
-                    </p>
-                """, unsafe_allow_html=True)
+            # Companion planting section across full width at the bottom
+            st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+            with st.expander("🌿 Companion Crops & Biological Intercropping Guide", expanded=False):
                 st.markdown(companion_text)
-                st.markdown("</div>", unsafe_allow_html=True)
 
         # =====================================================================
         # TAB 3: CROP DOCTOR VISION DIAGNOSTICS

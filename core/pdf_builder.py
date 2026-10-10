@@ -1,11 +1,12 @@
 """PDF Report Builder for Comprehensive Agricultural Advisory.
 
 Generates multi-page, publication-grade agronomic advisory dossiers:
-- Executive Farm & Plot Profile (Soil Diagnostics, Weather Indices)
-- Machine Learning Crop Recommendation & Ensemble Confidence Matrix
-- Comprehensive Soil Preparation & Split Nutrient Application Regimes
-- Phase-by-Phase Field Operations & Agronomic Timetable
-- Dual Crop Protection Guide (Organic Formulations vs Targeted Chemical Treatments)
+- Executive Farm & Plot Profile (Soil Diagnostics, Regional Weather Indices)
+- Crop Recommendation & Regional High-Yielding Varieties Evaluation
+- Comprehensive Soil Preparation & Split Nutrient Application Regimes (Per Acre & Per Hectare)
+- Complete Farmer Operational Action Checklist (When, What, Dosages, How) with Checkboxes [ ]
+- Integrated Pest & Disease Defense Protocol (IPM: Organic Formulations vs Targeted Chemical Treatments)
+- Critical Irrigation & Water Management Stages
 - Companion Planting & Agro-Ecological Synergy Blueprint
 - Economic Feasibility & Farm Budgeting Analysis (Yield, Costs, Net Margins)
 """
@@ -33,6 +34,7 @@ ACCENT = HexColor('#52B788')      # Fresh Sage Mint
 LIGHT_BG = HexColor('#F4F7F4')    # Soft Light Tint
 DARK_TEXT = HexColor('#1E293B')   # Slate Dark
 BORDER_COLOR = HexColor('#CBD5E1')# Crisp Border
+HIGHLIGHT_BG = HexColor('#E8F5E9')# Light Green Tint
 
 
 class PDFReportBuilder:
@@ -52,17 +54,17 @@ class PDFReportBuilder:
             fontSize=8,
             textColor=SECONDARY,
             fontName='Helvetica-Bold',
-            spaceAfter=4,
+            spaceAfter=3,
             alignment=TA_LEFT
         ))
 
         self.styles.add(ParagraphStyle(
             name='DocMainTitle',
             parent=self.styles['Heading1'],
-            fontSize=20,
-            leading=24,
+            fontSize=18,
+            leading=22,
             textColor=PRIMARY,
-            spaceAfter=6,
+            spaceAfter=5,
             alignment=TA_LEFT,
             fontName='Helvetica-Bold'
         ))
@@ -70,47 +72,47 @@ class PDFReportBuilder:
         self.styles.add(ParagraphStyle(
             name='DocSubTitle',
             parent=self.styles['Normal'],
-            fontSize=10,
-            leading=14,
+            fontSize=9.5,
+            leading=13,
             textColor=DARK_TEXT,
-            spaceAfter=15,
+            spaceAfter=10,
             alignment=TA_LEFT
         ))
 
         self.styles.add(ParagraphStyle(
             name='SectionHeading',
             parent=self.styles['Heading2'],
-            fontSize=12,
-            leading=16,
+            fontSize=11.5,
+            leading=15,
             textColor=PRIMARY,
-            spaceBefore=10,
-            spaceAfter=6,
+            spaceBefore=8,
+            spaceAfter=5,
             fontName='Helvetica-Bold'
         ))
 
         self.styles.add(ParagraphStyle(
             name='BodyRegular',
             parent=self.styles['BodyText'],
-            fontSize=9,
-            leading=13,
+            fontSize=8.5,
+            leading=12,
             textColor=DARK_TEXT,
             alignment=TA_LEFT,
-            spaceAfter=6
+            spaceAfter=5
         ))
 
         self.styles.add(ParagraphStyle(
             name='TableCell',
             parent=self.styles['Normal'],
-            fontSize=8.5,
-            leading=11.5,
+            fontSize=8,
+            leading=11,
             textColor=DARK_TEXT
         ))
 
         self.styles.add(ParagraphStyle(
             name='TableCellBold',
             parent=self.styles['Normal'],
-            fontSize=8.5,
-            leading=11.5,
+            fontSize=8,
+            leading=11,
             textColor=PRIMARY,
             fontName='Helvetica-Bold'
         ))
@@ -118,11 +120,38 @@ class PDFReportBuilder:
         self.styles.add(ParagraphStyle(
             name='TableHeader',
             parent=self.styles['Normal'],
-            fontSize=9,
-            leading=12,
+            fontSize=8.5,
+            leading=11.5,
             textColor=white,
             fontName='Helvetica-Bold',
             alignment=TA_CENTER
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='ChecklistCheck',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=11,
+            alignment=TA_CENTER,
+            textColor=PRIMARY,
+            fontName='Helvetica-Bold'
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='ChecklistCell',
+            parent=self.styles['Normal'],
+            fontSize=7.5,
+            leading=10,
+            textColor=DARK_TEXT
+        ))
+
+        self.styles.add(ParagraphStyle(
+            name='ChecklistCellBold',
+            parent=self.styles['Normal'],
+            fontSize=7.5,
+            leading=10,
+            textColor=PRIMARY,
+            fontName='Helvetica-Bold'
         ))
 
     def generate_advisory_pdf(
@@ -149,59 +178,55 @@ class PDFReportBuilder:
         )
 
         farmer_name = farmer_name or "Rajesh Kumar"
-        location = location or "Punjab, India"
+        location = location or "Thanjavur, Tamil Nadu"
         farm_size = farm_size or 5.0
         features = features or {
-            "N": 75, "P": 30, "K": 40, "pH": 6.5,
-            "avg_temp_c": 25.0, "total_rainfall_mm": 800,
-            "avg_humidity_percent": 65, "season_Kharif": 1, "season_Rabi": 0
+            "N": 80, "P": 38, "K": 30, "pH": 6.6,
+            "avg_temp_c": 28.0, "total_rainfall_mm": 1200,
+            "avg_humidity_percent": 72, "season_Kharif": 1, "season_Rabi": 0
         }
         advisory_data = advisory_data or {}
         crop = advisory_data.get("crop", "Rice")
-        confidence = advisory_data.get("confidence", 0.85)
+        confidence = advisory_data.get("confidence", 0.88)
+
+        # Prefer full timetable/checklist data
+        events_list = timetable_data or advisory_data.get("timetable", [])
 
         elements = []
 
-        # ================= PAGE 1: EXECUTIVE BRIEF & DIAGNOSTICS =================
+        # ================= SECTION 1 & 2 & 3: PROFILE, RECOMMENDATION & NUTRIENT PLAN =================
         elements.extend(self._build_header_banner(farmer_name, location, crop))
-        elements.append(Spacer(1, 0.15 * inch))
+        elements.append(Spacer(1, 0.1 * inch))
 
         elements.extend(self._build_profile_section(farmer_name, location, farm_size, features, crop, confidence))
-        elements.append(Spacer(1, 0.15 * inch))
+        elements.append(Spacer(1, 0.1 * inch))
 
-        elements.extend(self._build_ml_evaluation_section(crop, confidence, ml_metrics))
-        elements.append(Spacer(1, 0.15 * inch))
+        elements.extend(self._build_farmer_recommendation_section(crop, confidence, ml_metrics, location))
+        elements.append(Spacer(1, 0.1 * inch))
 
         elements.extend(self._build_soil_nutrient_management(crop, features))
         elements.append(Spacer(1, 0.15 * inch))
 
         elements.append(PageBreak())
 
-        # ================= PAGE 2: FIELD OPERATIONS & CULTIVATION CALENDAR =================
-        elements.append(Paragraph("CULTIVATION CALENDAR & AGRONOMIC PROTOCOL", self.styles['SectionHeading']))
-        elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=8))
-        elements.append(Paragraph(
-            f"Chronological operational milestones and task schedules for high-yield cultivation of <b>{crop}</b>:",
-            self.styles['BodyRegular']
-        ))
-
-        elements.extend(self._build_timetable_table(crop, timetable_data))
-        elements.append(Spacer(1, 0.15 * inch))
-
-        elements.extend(self._build_dual_protection_guide(crop))
+        # ================= SECTION 4: DETAILED OPERATIONAL ACTION CHECKLIST =================
+        elements.extend(self._build_operational_checklist_section(crop, events_list))
         elements.append(Spacer(1, 0.15 * inch))
 
         elements.append(PageBreak())
 
-        # ================= PAGE 3: COMPANION CROPS & ECONOMIC FEASIBILITY =================
-        elements.append(Paragraph("AGRO-ECOLOGICAL SYNERGY & FARM BUDGETING", self.styles['SectionHeading']))
-        elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=8))
+        # ================= SECTION 5, 6, 7 & 8: PROTECTION, IRRIGATION, COMPANIONS & ECONOMICS =================
+        elements.extend(self._build_dual_protection_guide(crop))
+        elements.append(Spacer(1, 0.12 * inch))
+
+        elements.extend(self._build_water_irrigation_guide(crop))
+        elements.append(Spacer(1, 0.12 * inch))
 
         elements.extend(self._build_companion_planting_section(crop, companion_data))
-        elements.append(Spacer(1, 0.15 * inch))
+        elements.append(Spacer(1, 0.12 * inch))
 
         elements.extend(self._build_economic_feasibility(crop, farm_size))
-        elements.append(Spacer(1, 0.2 * inch))
+        elements.append(Spacer(1, 0.15 * inch))
 
         elements.extend(self._build_certification_footer())
 
@@ -212,53 +237,53 @@ class PDFReportBuilder:
     def _build_header_banner(self, farmer_name: str, location: str, crop: str) -> list:
         """Create clean header block with reference metadata."""
         elements = []
-        elements.append(Paragraph("AGRIADVISORY PRECISION INTELLIGENCE PLATFORM • OFFICIAL EXTENSION DOSSIER", self.styles['DocSuperTitle']))
+        elements.append(Paragraph("AGRIADVISORY PRECISION INTELLIGENCE PLATFORM • OFFICIAL EXTENSION ADVISORY", self.styles['DocSuperTitle']))
         elements.append(Paragraph(f"CROP ADVISORY & FIELD MANAGEMENT DOSSIER: {crop.upper()}", self.styles['DocMainTitle']))
 
-        ref_id = f"REF-{datetime.now().strftime('%Y%m%d')}-{abs(hash(crop)) % 10000:04d}"
+        ref_id = f"TN-EXT-{datetime.now().strftime('%Y%m%d')}-{abs(hash(crop)) % 10000:04d}"
         sub_text = (
             f"<b>Generated:</b> {datetime.now().strftime('%B %d, %Y')} &nbsp;|&nbsp; "
-            f"<b>Reference ID:</b> {ref_id} &nbsp;|&nbsp; "
+            f"<b>Dossier ID:</b> {ref_id} &nbsp;|&nbsp; "
             f"<b>Farmer:</b> {farmer_name} &nbsp;|&nbsp; "
             f"<b>Location:</b> {location}"
         )
         elements.append(Paragraph(sub_text, self.styles['DocSubTitle']))
-        elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=8))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=6))
         return elements
 
     def _build_profile_section(self, farmer: str, loc: str, area: float, feats: dict, crop: str, conf: float) -> list:
         """Build structured 2-column diagnostics table."""
         elements = []
-        elements.append(Paragraph("1. FIELD DIAGNOSTICS & ENVIRONMENTAL PARAMETERS", self.styles['SectionHeading']))
+        elements.append(Paragraph("1. FIELD DIAGNOSTICS & SOIL HEALTH PARAMETERS", self.styles['SectionHeading']))
 
-        ph = feats.get("pH", 6.5)
-        ph_status = "Optimal" if 6.0 <= ph <= 7.5 else ("Acidic (Lime needed)" if ph < 6.0 else "Alkaline (Gypsum needed)")
-        season = "Kharif (Monsoon/Autumn)" if feats.get("season_Kharif", 1) == 1 else "Rabi (Winter/Spring)"
+        ph = feats.get("pH", 6.6)
+        ph_status = "Optimal Neutral" if 6.2 <= ph <= 7.5 else ("Slightly Acidic (Normal)" if 5.5 <= ph < 6.2 else ("Acidic (Lime recommended)" if ph < 5.5 else "Alkaline (Gypsum needed)"))
+        season = "Kharif (Kuruvai / Samba)" if feats.get("season_Kharif", 1) == 1 else "Rabi (Thaladi / Navarai)"
 
         data = [
             [
                 Paragraph("<b>Plot Characteristic</b>", self.styles['TableCellBold']),
-                Paragraph("<b>Observed Value</b>", self.styles['TableCellBold']),
-                Paragraph("<b>Climatic & Soil Parameter</b>", self.styles['TableCellBold']),
-                Paragraph("<b>Observed Value</b>", self.styles['TableCellBold'])
+                Paragraph("<b>Observed Field Value</b>", self.styles['TableCellBold']),
+                Paragraph("<b>Climatic & Soil Indicator</b>", self.styles['TableCellBold']),
+                Paragraph("<b>Observed Field Value</b>", self.styles['TableCellBold'])
             ],
             [
                 Paragraph("Target Farmer", self.styles['TableCell']),
                 Paragraph(farmer, self.styles['TableCell']),
-                Paragraph("Soil Nitrogen (N)", self.styles['TableCell']),
-                Paragraph(f"{feats.get('N', 75)} kg/ha", self.styles['TableCell'])
+                Paragraph("Available Soil Nitrogen (N)", self.styles['TableCell']),
+                Paragraph(f"{feats.get('N', 80)} kg/ha (Medium)", self.styles['TableCell'])
             ],
             [
                 Paragraph("Field Location", self.styles['TableCell']),
                 Paragraph(loc, self.styles['TableCell']),
-                Paragraph("Soil Phosphorus (P)", self.styles['TableCell']),
-                Paragraph(f"{feats.get('P', 30)} kg/ha", self.styles['TableCell'])
+                Paragraph("Available Soil Phosphorus (P)", self.styles['TableCell']),
+                Paragraph(f"{feats.get('P', 38)} kg/ha (Medium)", self.styles['TableCell'])
             ],
             [
                 Paragraph("Cultivable Area", self.styles['TableCell']),
-                Paragraph(f"{area:.1f} Hectares", self.styles['TableCell']),
-                Paragraph("Soil Potassium (K)", self.styles['TableCell']),
-                Paragraph(f"{feats.get('K', 40)} kg/ha", self.styles['TableCell'])
+                Paragraph(f"{area:.1f} Hectares ({area*2.47:.1f} Acres)", self.styles['TableCell']),
+                Paragraph("Available Soil Potassium (K)", self.styles['TableCell']),
+                Paragraph(f"{feats.get('K', 30)} kg/ha (Moderate)", self.styles['TableCell'])
             ],
             [
                 Paragraph("Target Cropping Season", self.styles['TableCell']),
@@ -267,10 +292,10 @@ class PDFReportBuilder:
                 Paragraph(f"{ph:.1f} ({ph_status})", self.styles['TableCell'])
             ],
             [
-                Paragraph("Recommended Crop", self.styles['TableCell']),
-                Paragraph(f"<b>{crop}</b>", self.styles['TableCellBold']),
-                Paragraph("Mean Temperature & Rain", self.styles['TableCell']),
-                Paragraph(f"{feats.get('avg_temp_c', 25):.1f}°C / {feats.get('total_rainfall_mm', 800):.0f} mm", self.styles['TableCell'])
+                Paragraph("Recommended Crop Choice", self.styles['TableCellBold']),
+                Paragraph(f"<b>{crop}</b> (Suitability: {conf:.0%})", self.styles['TableCellBold']),
+                Paragraph("Mean Temperature & Rainfall", self.styles['TableCell']),
+                Paragraph(f"{feats.get('avg_temp_c', 28.0):.1f}°C / {feats.get('total_rainfall_mm', 1200):.0f} mm", self.styles['TableCell'])
             ]
         ]
 
@@ -279,187 +304,244 @@ class PDFReportBuilder:
             ('BACKGROUND', (0, 0), (-1, 0), LIGHT_BG),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('BACKGROUND', (0, 5), (1, 5), HIGHLIGHT_BG),
         ]))
         elements.append(table)
         return elements
 
-    def _build_ml_evaluation_section(self, crop: str, conf: float, ml_metrics: Optional[dict]) -> list:
-        """Build machine learning recommendation breakdown table."""
+    def _build_farmer_recommendation_section(self, crop: str, conf: float, ml_metrics: Optional[dict], location: str) -> list:
+        """Build practical farmer-centric crop recommendation table with regional varieties."""
         elements = []
-        elements.append(Paragraph("2. MACHINE LEARNING MODEL RECOMMENDATION & ENSEMBLE RANKING", self.styles['SectionHeading']))
+        elements.append(Paragraph("2. RECOMMENDED CROP & REGIONAL HIGH-YIELDING VARIETIES", self.styles['SectionHeading']))
 
         preds = (ml_metrics or {}).get("predictions", [])
         if not preds:
             preds = [
                 {"crop": crop, "probability": conf, "confidence_pct": conf * 100},
-                {"crop": "Wheat" if crop != "Wheat" else "Rice", "probability": 0.15, "confidence_pct": 15.0},
-                {"crop": "Maize" if crop != "Maize" else "Cotton", "probability": 0.08, "confidence_pct": 8.0}
+                {"crop": "Maize" if crop != "Maize" else "Cotton", "probability": 0.08, "confidence_pct": 8.0},
+                {"crop": "Groundnut" if crop != "Groundnut" else "Urad", "probability": 0.04, "confidence_pct": 4.0}
             ]
+
+        # Recommended state varieties lookup
+        regional_varieties = {
+            "Rice": "ADT 53, CO 51, CR 1009 Sub 1, BPT 5204 (Samba Mahsuri)",
+            "Cotton": "SVPR 4, SVPR 6, MCU 7, Surabhi",
+            "Groundnut": "VRI 8, VRI 10, TMV 14, Kadiri 6",
+            "Maize": "COH(M) 8, COH(M) 10, Pioneer 30V92",
+            "Banana": "Grand Naine (G9), Poovan, Red Banana, Nendran",
+            "Sugarcane": "CoC 24, Co 86032, Co 0212",
+            "Blackgram": "VBN 8, VBN 11, ADT 6, MDU 1",
+            "Greengram": "VBN 4, VBN 5, ADT 3, CO 8",
+            "Ragi": "GPU 28, CO 15, Paiyur 2",
+            "Turmeric": "BSR 1, BSR 2, PTS 10"
+        }
 
         data = [
             [
-                Paragraph("Rank", self.styles['TableHeader']),
-                Paragraph("Evaluated Crop Variety", self.styles['TableHeader']),
-                Paragraph("Ensemble Probability", self.styles['TableHeader']),
-                Paragraph("Agronomic Viability Rationale", self.styles['TableHeader'])
+                Paragraph("Status", self.styles['TableHeader']),
+                Paragraph("Recommended Crop Choice", self.styles['TableHeader']),
+                Paragraph("Field Match", self.styles['TableHeader']),
+                Paragraph("Key High-Yielding Varieties", self.styles['TableHeader']),
+                Paragraph("Agronomic Fit for This Field", self.styles['TableHeader'])
             ]
         ]
 
         rationales = [
-            f"Highest physiological congruence with prevailing NPK ratio and rainfall of {crop}.",
-            "Viable secondary rotation crop with balanced moisture tolerance.",
-            "Contingency crop suitable under fluctuating seasonal rainfall patterns."
+            f"Primary selection. Optimum fit for prevailing soil NPK, moisture retention, and regional market demand.",
+            "Viable secondary rotation crop to break pest cycles and balance water use.",
+            "Contingency legume or dryland alternative for late season planting."
         ]
 
         for i, pred in enumerate(preds[:3]):
+            c_name = pred.get('crop', crop if i == 0 else 'Alternative')
+            prob = pred.get('probability', conf if i == 0 else 0.1)
             rank_label = "★ Primary Top Pick" if i == 0 else f"Alternative #{i}"
+            vars_text = regional_varieties.get(c_name, "Certified TNAU / ICAR Hybrids")
+
             data.append([
                 Paragraph(rank_label, self.styles['TableCellBold'] if i == 0 else self.styles['TableCell']),
-                Paragraph(f"<b>{pred.get('crop', '')}</b>", self.styles['TableCell']),
-                Paragraph(f"{pred.get('probability', 0):.1%} ({pred.get('confidence_pct', 0):.1f}%)", self.styles['TableCell']),
-                Paragraph(rationales[i] if i < len(rationales) else "Alternative option.", self.styles['TableCell'])
+                Paragraph(f"<b>{c_name}</b>", self.styles['TableCellBold'] if i == 0 else self.styles['TableCell']),
+                Paragraph(f"<b>{prob:.0%}</b>", self.styles['TableCellBold'] if i == 0 else self.styles['TableCell']),
+                Paragraph(vars_text, self.styles['TableCell']),
+                Paragraph(rationales[i] if i < len(rationales) else "Alternative crop.", self.styles['TableCell'])
             ])
 
-        table = Table(data, colWidths=[1.5 * inch, 1.8 * inch, 1.6 * inch, 2.6 * inch])
+        table = Table(data, colWidths=[1.3 * inch, 1.4 * inch, 0.8 * inch, 2.0 * inch, 2.0 * inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('BACKGROUND', (0, 1), (-1, 1), LIGHT_BG),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('BACKGROUND', (0, 1), (-1, 1), HIGHLIGHT_BG),
         ]))
         elements.append(table)
         return elements
 
     def _build_soil_nutrient_management(self, crop: str, feats: dict) -> list:
-        """Build detailed soil nutrient fertilization schedule."""
+        """Build detailed soil nutrient schedule with BOTH Acre and Hectare dosages."""
         elements = []
-        elements.append(Paragraph("3. SOIL PREPARATION & SPLIT NUTRIENT REGIME", self.styles['SectionHeading']))
+        elements.append(Paragraph("3. SOIL NUTRIENT APPLICATION SCHEDULE (PER ACRE & PER HECTARE)", self.styles['SectionHeading']))
 
-        n = feats.get("N", 75)
-        p = feats.get("P", 30)
-        k = feats.get("K", 40)
+        n = feats.get("N", 80)
+        p = feats.get("P", 38)
+        k = feats.get("K", 30)
 
         data = [
             [
                 Paragraph("Application Phase", self.styles['TableHeader']),
-                Paragraph("Nutrient Source & Formulation", self.styles['TableHeader']),
-                Paragraph("Target Quantity (per Hectare)", self.styles['TableHeader']),
-                Paragraph("Application Method & Guidelines", self.styles['TableHeader'])
+                Paragraph("Nutrient Source & Material", self.styles['TableHeader']),
+                Paragraph("Per Acre Dosage (Bags / kg)", self.styles['TableHeader']),
+                Paragraph("Per Hectare Dosage (kg)", self.styles['TableHeader']),
+                Paragraph("Field Application Method & Instructions", self.styles['TableHeader'])
             ],
             [
                 Paragraph("Basal Land Prep", self.styles['TableCellBold']),
-                Paragraph("Well-rotted FYM / Vermicompost", self.styles['TableCell']),
+                Paragraph("Well-rotted FYM / Compost", self.styles['TableCell']),
+                Paragraph("<b>8 - 10 Tons / acre</b><br/>(or Vermicompost @ 2 t/acre)", self.styles['TableCell']),
                 Paragraph("20 - 25 Tons / ha", self.styles['TableCell']),
-                Paragraph("Incorporate during secondary harrowing 2-3 weeks before sowing.", self.styles['TableCell'])
+                Paragraph("Incorporate into top 15 cm soil during secondary harrowing 2 weeks before sowing.", self.styles['TableCell'])
             ],
             [
                 Paragraph("Basal Fertilizer", self.styles['TableCellBold']),
-                Paragraph(f"SSP (Phosphorus) + MOP (Potash) + Urea", self.styles['TableCell']),
-                Paragraph(f"P: {p} kg, K: {k*0.5:.0f} kg, N: {n*0.5:.0f} kg", self.styles['TableCell']),
-                Paragraph("Band placement 5 cm below seed depth at final bed preparation.", self.styles['TableCell'])
+                Paragraph("DAP + MOP + Urea split", self.styles['TableCell']),
+                Paragraph(f"<b>DAP: {(p/0.46)/2.47:.0f} kg (~1 bag)<br/>MOP: {(k*0.5/0.6)/2.47:.0f} kg (0.5 bag)<br/>Urea: {max(0, n*0.5 - (p/0.46)*0.18)/(0.46*2.47):.0f} kg</b>", self.styles['TableCellBold']),
+                Paragraph(f"DAP: {p/0.46:.0f} kg<br/>MOP: {k*0.5/0.6:.0f} kg<br/>Urea: {max(0, n*0.5 - (p/0.46)*0.18)/0.46:.0f} kg", self.styles['TableCell']),
+                Paragraph("Band placement 5 cm below seed depth just before final puddling/leveling.", self.styles['TableCell'])
             ],
             [
-                Paragraph("1st Top Dressing", self.styles['TableCellBold']),
-                Paragraph("Urea (Split Nitrogen)", self.styles['TableCell']),
-                Paragraph(f"N: {n*0.25:.0f} kg / ha", self.styles['TableCell']),
-                Paragraph("Broadcast at active tillering / vegetative stage prior to irrigation.", self.styles['TableCell'])
+                Paragraph("1st Top Dressing (Day 21-25)", self.styles['TableCellBold']),
+                Paragraph("Neem Coated Urea (Nitrogen)", self.styles['TableCell']),
+                Paragraph(f"<b>Urea: {(n*0.25/0.46)/2.47:.0f} kg (~1 bag/acre)</b>", self.styles['TableCellBold']),
+                Paragraph(f"Urea: {n*0.25/0.46:.0f} kg / ha", self.styles['TableCell']),
+                Paragraph("Broadcast at active tillering / branching stage after weeding, in moist soil prior to irrigation.", self.styles['TableCell'])
             ],
             [
-                Paragraph("2nd Top Dressing", self.styles['TableCellBold']),
-                Paragraph("Urea + MOP (Remaining K)", self.styles['TableCell']),
-                Paragraph(f"N: {n*0.25:.0f} kg, K: {k*0.5:.0f} kg", self.styles['TableCell']),
-                Paragraph("Apply at panicle initiation / pre-flowering stage in moist soil.", self.styles['TableCell'])
+                Paragraph("2nd Top Dressing (Day 45-50)", self.styles['TableCellBold']),
+                Paragraph("Urea + MOP (Panicle Initiation)", self.styles['TableCell']),
+                Paragraph(f"<b>Urea: {(n*0.25/0.46)/2.47:.0f} kg<br/>MOP: {(k*0.5/0.6)/2.47:.0f} kg (0.5 bag)</b>", self.styles['TableCellBold']),
+                Paragraph(f"Urea: {n*0.25/0.46:.0f} kg<br/>MOP: {k*0.5/0.6:.0f} kg", self.styles['TableCell']),
+                Paragraph("Apply at panicle initiation / flower-bud formation. Essential for healthy grain filling.", self.styles['TableCell'])
             ],
             [
-                Paragraph("Foliar Boost", self.styles['TableCellBold']),
+                Paragraph("Foliar Boost (Day 35 & 60)", self.styles['TableCellBold']),
                 Paragraph("Zinc Sulfate (0.5%) + Urea (1%)", self.styles['TableCell']),
-                Paragraph("2.5 kg ZnSO4 in 500 L water", self.styles['TableCell']),
-                Paragraph("Foliar spray during early morning to alleviate trace micronutrient stress.", self.styles['TableCell'])
+                Paragraph("<b>ZnSO4: 1.0 kg + Urea: 2 kg<br/>in 200 L water / acre</b>", self.styles['TableCellBold']),
+                Paragraph("ZnSO4: 2.5 kg + Urea: 5 kg<br/>in 500 L water / ha", self.styles['TableCell']),
+                Paragraph("Spray early morning on leaves to eliminate Khaira / micronutrient deficiency and boost chlorophyll.", self.styles['TableCell'])
             ]
         ]
 
-        table = Table(data, colWidths=[1.4 * inch, 2.1 * inch, 1.8 * inch, 2.2 * inch])
+        table = Table(data, colWidths=[1.4 * inch, 1.6 * inch, 1.6 * inch, 1.2 * inch, 1.7 * inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), SECONDARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ]))
         elements.append(table)
         return elements
 
-    def _build_timetable_table(self, crop: str, timetable_data: Optional[list]) -> list:
-        """Build detailed operational calendar table."""
+    def _build_operational_checklist_section(self, crop: str, events: Optional[list]) -> list:
+        """Build publication-grade multi-stage operational action checklist with checkboxes [ ]."""
         elements = []
-        if not timetable_data:
-            timetable_data = [
+        elements.append(Paragraph("4. COMPLETE FARMER OPERATIONAL ACTION CHECKLIST (WHEN, WHAT, HOW)", self.styles['SectionHeading']))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=6))
+        elements.append(Paragraph(
+            "<b>Practical Field Instructions:</b> Keep this checklist on the farm. As each scheduled operation is completed, "
+            "tick the checkbox <b>[ ✓ ]</b> and note the application date. Follow exact dosages per acre/hectare.",
+            self.styles['BodyRegular']
+        ))
+
+        # Fallback default events if empty
+        if not events:
+            events = [
                 {
-                    "phase": "Land Preparation",
-                    "duration": "2 - 3 Weeks Pre-Plant",
-                    "tasks": ["Deep summer plowing (20-25 cm) followed by two cross-harrowings.", "Incorporate 20 tons FYM/ha and apply basal NPK doses."]
+                    "when": "Day -14", "stage": "Deep Plowing", "what": "Deep summer plowing and soil solarization",
+                    "dosage": "Plow to 20-25 cm. Incorporate Dhaincha @ 8 kg/acre (20 kg/ha).",
+                    "how": "Moldboard plowing to expose resting soil pupae to sunlight."
                 },
                 {
-                    "phase": "Sowing & Priming",
-                    "duration": "Weeks 1 - 2",
-                    "tasks": ["Seed treatment with bio-inoculants (Rhizobium/Azospirillum + PSB).", "Sow at 45x15 cm spacing with initial light irrigation."]
+                    "when": "Day -7", "stage": "Basal Manure", "what": "Incorporate FYM and bio-fertilizer",
+                    "dosage": "FYM @ 10 t/acre (25 t/ha) enriched with Trichoderma @ 2 kg/acre.",
+                    "how": "Evenly broadcast and mix into top 15 cm soil."
                 },
                 {
-                    "phase": "Vegetative Growth",
-                    "duration": "Weeks 3 - 8",
-                    "tasks": ["First inter-row weeding at 21 days; apply first top-dress nitrogen.", "Monitor sucking pests with yellow sticky traps (15-20/ha)."]
+                    "when": "Day 0", "stage": "Sowing Day", "what": "Seed treatment & certified sowing",
+                    "dosage": "Seed rate: 16 kg/acre. Azospirillum @ 200 g/acre + Pseudomonas @ 10 g/kg seed.",
+                    "how": "Treat seed with kanji slurry, shade dry 30 mins, sow at 45x15 cm spacing."
                 },
                 {
-                    "phase": "Flowering & Pods",
-                    "duration": "Weeks 9 - 16",
-                    "tasks": ["Maintain uninhibited soil moisture; apply second nitrogen top-dress.", "Inspect foliage for rust, spot, or blight symptoms."]
+                    "when": "Day +21", "stage": "Weeding", "what": "First weeding & sticky traps",
+                    "dosage": "Install 6 yellow sticky traps/acre. Top-dress Urea @ 1 bag/acre.",
+                    "how": "Cono-weeder inter-cultivation to aerate roots and suppress weeds."
                 },
                 {
-                    "phase": "Maturity & Harvest",
-                    "duration": "Weeks 17 - 20",
-                    "tasks": ["Withdraw irrigation 12 days prior to harvest; check grain moisture (<14%).", "Harvest, thresh, and dry on clean canvas; store in hermetic bags."]
+                    "when": "Day +45", "stage": "Panicle Top-Dress", "what": "Second top dressing (Urea + Potash)",
+                    "dosage": "Urea @ 1 bag/acre (45 kg) + MOP @ 0.5 bag/acre (25 kg).",
+                    "how": "Broadcast in moist soil at panicle initiation before irrigation."
+                },
+                {
+                    "when": "Day +115", "stage": "Harvesting", "what": "Drain field & harvest at golden maturity",
+                    "dosage": "Drain water 10 days prior. Harvest when 85% grains turn straw-gold.",
+                    "how": "Thresh, clean, dry down to <13% moisture and pack in hermetic bags."
                 }
             ]
 
         data = [
             [
-                Paragraph("Phase & Stage", self.styles['TableHeader']),
-                Paragraph("Timeline", self.styles['TableHeader']),
-                Paragraph("Key Mandatory Field Operations & Instructions", self.styles['TableHeader'])
+                Paragraph("Tick", self.styles['TableHeader']),
+                Paragraph("Timeline (WHEN)", self.styles['TableHeader']),
+                Paragraph("Stage & Operation (WHAT)", self.styles['TableHeader']),
+                Paragraph("Exact Dosages & Materials (Per Acre & Ha)", self.styles['TableHeader']),
+                Paragraph("Field Execution Guide (HOW)", self.styles['TableHeader'])
             ]
         ]
 
-        for item in timetable_data:
-            phase_title = item.get("phase", item.get("stage", "Phase"))
-            duration = item.get("duration", "")
-            tasks = item.get("tasks", item.get("activities", []))
-            tasks_text = "<br/>".join([f"• {t}" for t in tasks])
+        for i, ev in enumerate(events):
+            when_str = ev.get("when", f"Day {ev.get('day_offset', i)}")
+            stage_str = ev.get("stage", ev.get("phase", "Field Operation"))
+            what_str = ev.get("what", "")
+            if not what_str and "tasks" in ev:
+                what_str = "; ".join(ev["tasks"])
+            dosage_str = ev.get("dosage", "")
+            how_str = ev.get("how", "")
+            if not how_str and "tasks" in ev:
+                how_str = "; ".join(ev["tasks"])
 
             data.append([
-                Paragraph(f"<b>{phase_title}</b>", self.styles['TableCellBold']),
-                Paragraph(duration, self.styles['TableCell']),
-                Paragraph(tasks_text, self.styles['TableCell'])
+                Paragraph("[ &nbsp; ]", self.styles['ChecklistCheck']),
+                Paragraph(f"<b>{when_str}</b>", self.styles['ChecklistCellBold']),
+                Paragraph(f"<b>{stage_str}</b><br/>{what_str}", self.styles['ChecklistCell']),
+                Paragraph(f"<b>Dosage:</b> {dosage_str}", self.styles['ChecklistCell']),
+                Paragraph(how_str, self.styles['ChecklistCell'])
             ])
 
-        table = Table(data, colWidths=[1.8 * inch, 1.4 * inch, 4.3 * inch])
-        table.setStyle(TableStyle([
+        table = Table(data, colWidths=[0.45 * inch, 1.25 * inch, 1.8 * inch, 2.1 * inch, 1.9 * inch], repeatRows=1)
+        
+        table_style = [
             ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ]))
+            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ]
+        # Alternating subtle row shading for high legibility
+        for r in range(1, len(data)):
+            if r % 2 == 1:
+                table_style.append(('BACKGROUND', (0, r), (-1, r), LIGHT_BG))
+
+        table.setStyle(TableStyle(table_style))
         elements.append(table)
         return elements
 
     def _build_dual_protection_guide(self, crop: str) -> list:
         """Build dual IPM crop protection guide."""
         elements = []
-        elements.append(Paragraph("4. INTEGRATED PEST & DISEASE MANAGEMENT PROTOCOL (IPM)", self.styles['SectionHeading']))
+        elements.append(Paragraph("5. INTEGRATED PEST & DISEASE DEFENSE PROTOCOL (IPM)", self.styles['SectionHeading']))
 
         data = [
             [
@@ -469,27 +551,27 @@ class PDFReportBuilder:
                 Paragraph("Safety Interval (PHI)", self.styles['TableHeader'])
             ],
             [
-                Paragraph("<b>Sucking Pests (Aphids, Jassids)</b>", self.styles['TableCell']),
-                Paragraph("5% Neem Seed Kernel Extract (NSKE) or Neem oil 3000 ppm @ 4 ml/L", self.styles['TableCell']),
+                Paragraph("<b>Sucking Pests (Aphids, Jassids, BPH)</b>", self.styles['TableCell']),
+                Paragraph("5% Neem Seed Kernel Extract (NSKE) or Neem oil 3000 ppm @ 4 ml/L water", self.styles['TableCell']),
                 Paragraph("Imidacloprid 17.8% SL @ 0.3 ml/L or Thiamethoxam 25% WG @ 0.2 g/L", self.styles['TableCell']),
                 Paragraph("14 - 21 Days", self.styles['TableCell'])
             ],
             [
-                Paragraph("<b>Foliar Leaf Spots & Blight</b>", self.styles['TableCell']),
-                Paragraph("Trichoderma viride foliar spray @ 5 g/L + Copper soap formulation", self.styles['TableCell']),
-                Paragraph("Mancozeb 75% WP @ 2.5 g/L or Chlorothalonil 75% WP @ 2.0 g/L", self.styles['TableCell']),
+                Paragraph("<b>Foliar Leaf Blast & Blight</b>", self.styles['TableCell']),
+                Paragraph("Pseudomonas fluorescens @ 5 g/L foliar spray + Cow urine extract", self.styles['TableCell']),
+                Paragraph("Tricyclazole 75% WP @ 0.6 g/L or Azoxystrobin 23% SC @ 1 ml/L", self.styles['TableCell']),
                 Paragraph("15 Days", self.styles['TableCell'])
             ],
             [
-                Paragraph("<b>Powdery Mildew & Rust</b>", self.styles['TableCell']),
-                Paragraph("Dilute sour buttermilk spray (5%) or Potassium bicarbonate @ 3 g/L", self.styles['TableCell']),
-                Paragraph("Hexaconazole 5% EC @ 2 ml/L or Propiconazole 25% EC @ 1 ml/L", self.styles['TableCell']),
+                Paragraph("<b>Stem Borer / Pod Borer</b>", self.styles['TableCell']),
+                Paragraph("Trichogramma egg parasitoid cards @ 2 cards/acre + Pheromone traps @ 5/acre", self.styles['TableCell']),
+                Paragraph("Chlorantraniliprole 18.5% SC @ 0.3 ml/L (60 ml/acre) in 200 L water", self.styles['TableCell']),
                 Paragraph("21 Days", self.styles['TableCell'])
             ],
             [
-                Paragraph("<b>Soil-Borne Root Pathogens</b>", self.styles['TableCell']),
-                Paragraph("Pseudomonas fluorescens seed inoculant @ 10 g/kg + Neem cake 250 kg/ha", self.styles['TableCell']),
-                Paragraph("Carbendazim 50% WP @ 2 g/kg seed or Metalaxyl MZ @ 2.5 g/kg", self.styles['TableCell']),
+                Paragraph("<b>Root Rot & Damping-Off</b>", self.styles['TableCell']),
+                Paragraph("Trichoderma viride @ 5 kg/ha in 250 kg FYM + Neem cake 100 kg/acre", self.styles['TableCell']),
+                Paragraph("Carbendazim 50% WP @ 2 g/kg seed dressing or Metalaxyl MZ @ 2.5 g/kg", self.styles['TableCell']),
                 Paragraph("At Sowing", self.styles['TableCell'])
             ]
         ]
@@ -499,8 +581,52 @@ class PDFReportBuilder:
             ('BACKGROUND', (0, 0), (-1, 0), SECONDARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+        ]))
+        elements.append(table)
+        return elements
+
+    def _build_water_irrigation_guide(self, crop: str) -> list:
+        """Build critical irrigation and water management table."""
+        elements = []
+        elements.append(Paragraph("6. CRITICAL IRRIGATION & WATER MANAGEMENT STAGES", self.styles['SectionHeading']))
+
+        data = [
+            [
+                Paragraph("Growth Stage", self.styles['TableHeader']),
+                Paragraph("Recommended Water Level / Regime", self.styles['TableHeader']),
+                Paragraph("Practical Water-Saving Field Instructions", self.styles['TableHeader'])
+            ],
+            [
+                Paragraph("<b>Sowing to Emergence (Day 0-7)</b>", self.styles['TableCellBold']),
+                Paragraph("Thin film / moist soil (1 - 2 cm)", self.styles['TableCell']),
+                Paragraph("Keep field saturated without stagnant water. Prevent seed drowning and soil crusting.", self.styles['TableCell'])
+            ],
+            [
+                Paragraph("<b>Active Tillering (Day 15-35)</b>", self.styles['TableCellBold']),
+                Paragraph("Shallow submergence (2 - 3 cm)", self.styles['TableCell']),
+                Paragraph("Adopt Alternate Wetting & Drying (AWD). Irrigate only when hairline cracks appear on soil.", self.styles['TableCell'])
+            ],
+            [
+                Paragraph("<b>Panicle Initiation & Flowering (Day 45-75)</b>", self.styles['TableCellBold']),
+                Paragraph("Standing water (4 - 5 cm)", self.styles['TableCell']),
+                Paragraph("Critical moisture sensitive stage. Do NOT allow moisture stress; ensure continuous moisture.", self.styles['TableCell'])
+            ],
+            [
+                Paragraph("<b>Maturity & Pre-Harvest (Day 100+)</b>", self.styles['TableCellBold']),
+                Paragraph("Completely Drained", self.styles['TableCell']),
+                Paragraph("Drain all standing water 10 to 14 days before harvest to speed uniform ripening and ease machinery.", self.styles['TableCell'])
+            ]
+        ]
+
+        table = Table(data, colWidths=[2.2 * inch, 2.2 * inch, 3.1 * inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+            ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ]))
         elements.append(table)
         return elements
@@ -508,42 +634,42 @@ class PDFReportBuilder:
     def _build_companion_planting_section(self, crop: str, companion_text: Optional[str]) -> list:
         """Build companion planting guide."""
         elements = []
-        elements.append(Paragraph("5. COMPANION CROPPING & AGRO-ECOLOGICAL RESILIENCE", self.styles['SectionHeading']))
+        elements.append(Paragraph("7. COMPANION CROPPING & AGRO-ECOLOGICAL RESILIENCE", self.styles['SectionHeading']))
 
         data = [
             [
                 Paragraph("Companion Species", self.styles['TableHeader']),
                 Paragraph("Spatial Layout & Ratio", self.styles['TableHeader']),
                 Paragraph("Ecological Mechanism & Synergy Benefits", self.styles['TableHeader']),
-                Paragraph("Maturity Timeline", self.styles['TableHeader'])
+                Paragraph("Harvest Window", self.styles['TableHeader'])
             ],
             [
                 Paragraph("<b>Short-Duration Pulse (Moong/Urad)</b>", self.styles['TableCellBold']),
-                Paragraph("2:1 or 3:1 Strip Cropping", self.styles['TableCell']),
-                Paragraph("Atmospheric nitrogen fixation (30-40 kg N/ha), weed smothering living mulch.", self.styles['TableCell']),
+                Paragraph("2:1 or 3:1 Strip Cropping on Bunds", self.styles['TableCell']),
+                Paragraph("Atmospheric nitrogen fixation (30-40 kg N/ha), suppresses weed growth as living mulch.", self.styles['TableCell']),
                 Paragraph("65 - 75 Days", self.styles['TableCell'])
             ],
             [
                 Paragraph("<b>African Marigold (Trap Crop)</b>", self.styles['TableCellBold']),
-                Paragraph("Peripheral border (every 10th row)", self.styles['TableCell']),
-                Paragraph("Root alpha-terthienyl exudates suppress root-knot nematodes; flowers attract predators.", self.styles['TableCell']),
+                Paragraph("Border trap rows (every 10th row)", self.styles['TableCell']),
+                Paragraph("Root alpha-terthienyl exudates suppress root-knot nematodes; yellow flowers trap bollworms.", self.styles['TableCell']),
                 Paragraph("Continuous flowering", self.styles['TableCell'])
             ],
             [
-                Paragraph("<b>Fennel / Coriander Border</b>", self.styles['TableCellBold']),
-                Paragraph("Irrigation dyke interspersion", self.styles['TableCell']),
-                Paragraph("Attracts parasitic wasps and hoverflies which prey naturally on aphids and borers.", self.styles['TableCell']),
-                Paragraph("85 - 95 Days", self.styles['TableCell'])
+                Paragraph("<b>Sesbania / Dhaincha Bund Planting</b>", self.styles['TableCellBold']),
+                Paragraph("Field perimeter & irrigation bunds", self.styles['TableCell']),
+                Paragraph("Provides biomass, shelters beneficial predatory wasps against borers, acts as windbreak.", self.styles['TableCell']),
+                Paragraph("45 - 60 Days", self.styles['TableCell'])
             ]
         ]
 
-        table = Table(data, colWidths=[1.8 * inch, 1.6 * inch, 3.1 * inch, 1.0 * inch])
+        table = Table(data, colWidths=[1.8 * inch, 1.7 * inch, 3.0 * inch, 1.0 * inch])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+            ('BACKGROUND', (0, 0), (-1, 0), SECONDARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ]))
         elements.append(table)
         return elements
@@ -551,46 +677,48 @@ class PDFReportBuilder:
     def _build_economic_feasibility(self, crop: str, area: float) -> list:
         """Build farm budgeting and economic feasibility projection table."""
         elements = []
-        elements.append(Paragraph("6. ECONOMIC FEASIBILITY & FARM BUDGETING PROJECTION", self.styles['SectionHeading']))
+        elements.append(Paragraph("8. FARM BUDGETING, EXPECTED YIELD & NET PROFIT MARGINS", self.styles['SectionHeading']))
 
-        exp_yield_per_ha = 5.2
-        total_yield = exp_yield_per_ha * area
-        msp_per_ton = 22500  # indicative INR per ton
-        gross_rev_ha = exp_yield_per_ha * msp_per_ton
-        cost_ha = 62000
-        net_profit_ha = gross_rev_ha - cost_ha
-        total_net_profit = net_profit_ha * area
+        exp_yield_per_acre = 2.4  # Tons per acre
+        exp_yield_per_ha = exp_yield_per_acre * 2.47
+        acre_total = area * 2.47
+        total_yield = exp_yield_per_acre * acre_total
+        msp_per_ton = 23000  # MSP benchmark INR
+        gross_rev_acre = exp_yield_per_acre * msp_per_ton
+        cost_acre = 25000
+        net_profit_acre = gross_rev_acre - cost_acre
+        total_net_profit = net_profit_acre * acre_total
 
         data = [
             [
                 Paragraph("Budgeting Category", self.styles['TableHeader']),
-                Paragraph("Per Hectare Estimate", self.styles['TableHeader']),
-                Paragraph(f"Total Farm Projection ({area:.1f} ha)", self.styles['TableHeader']),
+                Paragraph("Per Acre Estimate", self.styles['TableHeader']),
+                Paragraph(f"Total Farm Projection ({acre_total:.1f} Acres)", self.styles['TableHeader']),
                 Paragraph("Operational Notes", self.styles['TableHeader'])
             ],
             [
-                Paragraph("Anticipated Grain/Crop Yield", self.styles['TableCellBold']),
-                Paragraph(f"{exp_yield_per_ha:.1f} Tons / ha", self.styles['TableCell']),
-                Paragraph(f"<b>{total_yield:.1f} Tons</b>", self.styles['TableCellBold']),
-                Paragraph("Based on disciplined adherence to split nutrient & water protocols.", self.styles['TableCell'])
+                Paragraph("Anticipated Harvest Yield", self.styles['TableCellBold']),
+                Paragraph(f"<b>{exp_yield_per_acre:.1f} Tons / acre</b><br/>({exp_yield_per_ha:.1f} Tons / ha)", self.styles['TableCell']),
+                Paragraph(f"<b>{total_yield:.1f} Tons Total</b>", self.styles['TableCellBold']),
+                Paragraph("Achievable with disciplined adherence to split nutrient & AWD water regimes.", self.styles['TableCell'])
             ],
             [
                 Paragraph("Projected Gross Revenue", self.styles['TableCellBold']),
-                Paragraph(f"₹ {gross_rev_ha:,.0f}", self.styles['TableCell']),
-                Paragraph(f"₹ {gross_rev_ha * area:,.0f}", self.styles['TableCell']),
-                Paragraph(f"Calculated at prevailing Minimum Support Price benchmark of ₹{msp_per_ton:,.0f}/ton.", self.styles['TableCell'])
+                Paragraph(f"Rs. {gross_rev_acre:,.0f} / acre", self.styles['TableCell']),
+                Paragraph(f"Rs. {gross_rev_acre * acre_total:,.0f}", self.styles['TableCell']),
+                Paragraph(f"Calculated at current government Minimum Support Price benchmark of Rs. {msp_per_ton:,.0f}/ton.", self.styles['TableCell'])
             ],
             [
-                Paragraph("Estimated Operational Costs", self.styles['TableCellBold']),
-                Paragraph(f"₹ {cost_ha:,.0f}", self.styles['TableCell']),
-                Paragraph(f"₹ {cost_ha * area:,.0f}", self.styles['TableCell']),
-                Paragraph("Includes seeds, fertilizers, tractor hire, irrigation, weeding, & harvest labor.", self.styles['TableCell'])
+                Paragraph("Estimated Production Costs", self.styles['TableCellBold']),
+                Paragraph(f"Rs. {cost_acre:,.0f} / acre", self.styles['TableCell']),
+                Paragraph(f"Rs. {cost_acre * acre_total:,.0f}", self.styles['TableCell']),
+                Paragraph("Includes certified seeds, fertilizers, tractor tillage, weeding labor, & harvesting.", self.styles['TableCell'])
             ],
             [
-                Paragraph("<b>Estimated Net Profit Margins</b>", self.styles['TableCellBold']),
-                Paragraph(f"<b>₹ {net_profit_ha:,.0f} / ha</b>", self.styles['TableCellBold']),
-                Paragraph(f"<b>₹ {total_net_profit:,.0f}</b>", self.styles['TableCellBold']),
-                Paragraph("<b>Projected Benefit-Cost Ratio: 1.88</b>", self.styles['TableCellBold'])
+                Paragraph("<b>Estimated Net Profit Margin</b>", self.styles['TableCellBold']),
+                Paragraph(f"<b>Rs. {net_profit_acre:,.0f} / acre</b>", self.styles['TableCellBold']),
+                Paragraph(f"<b>Rs. {total_net_profit:,.0f} Total</b>", self.styles['TableCellBold']),
+                Paragraph("<b>Projected Benefit-Cost Ratio: 2.20</b>", self.styles['TableCellBold'])
             ]
         ]
 
@@ -599,9 +727,9 @@ class PDFReportBuilder:
             ('BACKGROUND', (0, 0), (-1, 0), SECONDARY),
             ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('BACKGROUND', (0, 4), (-1, 4), LIGHT_BG),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('BACKGROUND', (0, 4), (-1, 4), HIGHLIGHT_BG),
         ]))
         elements.append(table)
         return elements
@@ -609,21 +737,20 @@ class PDFReportBuilder:
     def _build_certification_footer(self) -> list:
         """Build certification disclaimer and sign-off."""
         elements = []
-        elements.append(HRFlowable(width="100%", thickness=1, color=BORDER_COLOR, spaceAfter=8))
+        elements.append(HRFlowable(width="100%", thickness=1, color=BORDER_COLOR, spaceAfter=6))
 
         disc_text = (
-            "<b>Disclaimer & Extension Advisory Notice:</b> This dossier is generated by the AgriAdvisory AI Precision "
-            "System leveraging ensemble machine learning models, calibrated agronomic retrieval-augmented generation (RAG), "
-            "and ICAR agro-advisory guidelines. Field variations in soil micro-flora, acute localized weather anomalies, "
-            "and pesticide application timings may require minor adjustments. Always adhere to chemical label precautions."
+            "<b>Extension Advisory Notice:</b> This field management dossier is prepared for farmer operational reference "
+            "based on regional soil fertility indices, Tamil Nadu agro-climatic conditions, and verified agricultural extension protocols. "
+            "Always follow seed and pesticide label precautions and maintain local spray records."
         )
         elements.append(Paragraph(disc_text, self.styles['TableCell']))
-        elements.append(Spacer(1, 0.1 * inch))
+        elements.append(Spacer(1, 0.08 * inch))
 
         sign_data = [
             [
-                Paragraph(f"<b>System Verification:</b> Automated Agronomic Engine v3.5<br/><b>Verified Date:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}", self.styles['TableCell']),
-                Paragraph("<b>Agronomic Certification Authority:</b><br/>Division of Agricultural Extension & AI Systems", self.styles['TableCell'])
+                Paragraph(f"<b>Advisory Reference:</b> Verified Agronomic Protocol v3.6<br/><b>Verified Date:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}", self.styles['TableCell']),
+                Paragraph("<b>Division of Agricultural Extension:</b><br/>Official Farmer Advisory & Precision Field Support", self.styles['TableCell'])
             ]
         ]
         sign_table = Table(sign_data, colWidths=[3.75 * inch, 3.75 * inch])
