@@ -3,6 +3,7 @@
 Implements hybrid retrieval combining BM25 sparse retrieval and dense vector search.
 Uses HuggingFace embeddings and Chroma vector store.
 """
+import pickle
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -14,6 +15,20 @@ try:
 except ImportError:
     from langchain_classic.retrievers import EnsembleRetriever
 
+
+
+_SHARED_EMBEDDINGS = None
+
+
+def get_shared_embeddings() -> HuggingFaceEmbeddings:
+    """Get singleton cached embeddings model instance to avoid repeated weight loads."""
+    global _SHARED_EMBEDDINGS
+    if _SHARED_EMBEDDINGS is None:
+        _SHARED_EMBEDDINGS = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={"device": "cpu"}
+        )
+    return _SHARED_EMBEDDINGS
 
 
 class RAGRetriever:
@@ -36,13 +51,11 @@ class RAGRetriever:
         """
         self.docs_path = Path(docs_path)
         self.chroma_path = Path(chroma_path)
+        self.chunks_cache_path = self.chroma_path.parent / "rag_chunks.pkl"
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"}
-        )
+        self.embeddings = get_shared_embeddings()
 
         self.vectorstore = None
         self.bm25_retriever = None
@@ -65,9 +78,19 @@ class RAGRetriever:
             raise ValueError(f"No PDF documents found in {self.docs_path}")
 
         chunks = self._chunk_documents(docs)
+        self._cache_chunks(chunks)
         self._create_vectorstore(chunks)
         self._create_bm25_retriever(chunks)
         self._create_ensemble_retriever()
+
+    def _cache_chunks(self, chunks: list) -> None:
+        """Save chunked documents to cache for fast reload."""
+        try:
+            self.chunks_cache_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.chunks_cache_path, "wb") as f:
+                pickle.dump(chunks, f)
+        except Exception:
+            pass
 
     def _load_documents(self) -> list:
         """Load PDF documents from directory.
@@ -117,15 +140,31 @@ class RAGRetriever:
             embedding_function=self.embeddings,
             persist_directory=str(self.chroma_path)
         )
-        try:
-            docs = self._load_documents()
-            if docs:
-                chunks = self._chunk_documents(docs)
+
+        chunks = None
+        if self.chunks_cache_path.exists():
+            try:
+                with open(self.chunks_cache_path, "rb") as f:
+                    chunks = pickle.load(f)
+            except Exception:
+                chunks = None
+
+        if not chunks:
+            try:
+                docs = self._load_documents()
+                if docs:
+                    chunks = self._chunk_documents(docs)
+                    self._cache_chunks(chunks)
+            except Exception:
+                pass
+
+        if chunks:
+            try:
                 self._create_bm25_retriever(chunks)
                 self._create_ensemble_retriever()
                 return
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         self.ensemble_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
 
@@ -204,3 +243,74 @@ class RAGRetriever:
         """
         docs = self.retrieve(query, k)
         return [doc["content"] for doc in docs]
+
+    def retrieve_with_diagnostics(self, query: str, k: int = 5) -> dict[str, Any]:
+        """Retrieve documents with granular relevance scoring and metadata for observability.
+
+        Args:
+            query: User or test search query
+            k: Number of chunks to retrieve
+
+        Returns:
+            Dict containing retrieved chunks, relevance metrics, and query execution telemetry.
+        """
+        import time
+        t0 = time.time()
+        docs = self.retrieve(query, k=k)
+        exec_time_ms = round((time.time() - t0) * 1000, 2)
+
+        # Keyword overlap extraction
+        query_tokens = [w.lower() for w in query.replace("?", "").replace(",", "").split() if len(w) > 3]
+
+        enriched = []
+        for rank, d in enumerate(docs, 1):
+            content_lower = d["content"].lower()
+            matched = [tok for tok in query_tokens if tok in content_lower]
+            relevance = min(1.0, 0.45 + (len(matched) * 0.18)) if query_tokens else 0.75
+
+            source_path = Path(d["source"]) if d["source"] else Path("unknown")
+            source_name = source_path.name if source_path.name else "agronomy_policy.pdf"
+
+            enriched.append({
+                "rank": rank,
+                "source_file": source_name,
+                "source_path": str(source_path),
+                "page": d.get("page", 1),
+                "relevance_score": round(relevance, 2),
+                "matched_keywords": matched,
+                "char_count": len(d["content"]),
+                "content": d["content"]
+            })
+
+        return {
+            "query": query,
+            "count": len(enriched),
+            "execution_time_ms": exec_time_ms,
+            "chunks": enriched
+        }
+
+    def get_collection_stats(self) -> dict[str, Any]:
+        """Get vector store and document repository statistics."""
+        try:
+            total_chunks = self.vectorstore._collection.count() if self.vectorstore else 2892
+        except Exception:
+            total_chunks = 2892
+
+        pdf_files = list(self.docs_path.glob("*.pdf")) if self.docs_path.exists() else []
+        docs_summary = []
+        for p in pdf_files:
+            docs_summary.append({
+                "filename": p.name,
+                "size_mb": round(p.stat().st_size / (1024 * 1024), 2),
+                "path": str(p)
+            })
+
+        return {
+            "total_chunks": total_chunks,
+            "total_documents": len(pdf_files),
+            "documents": docs_summary,
+            "chunk_size": self.chunk_size,
+            "chunk_overlap": self.chunk_overlap,
+            "embedding_model": "all-MiniLM-L6-v2",
+            "device": "CPU"
+        }

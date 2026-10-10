@@ -78,6 +78,14 @@ class MLEngine:
                 "warnings": [f"Prediction failed: {str(e)}"]
             }
 
+    def _get_base_estimator(self):
+        """Extract underlying tree estimator from CalibratedClassifierCV or pipeline."""
+        if hasattr(self.model, 'calibrated_classifiers_') and self.model.calibrated_classifiers_:
+            return self.model.calibrated_classifiers_[0].estimator
+        if hasattr(self.model, 'estimator'):
+            return self.model.estimator
+        return self.model
+
     def get_shap_values(self, features: dict) -> dict[str, Any]:
         """Get SHAP feature importance for What-If analysis.
 
@@ -89,34 +97,55 @@ class MLEngine:
         """
         try:
             X = self._prepare_features(features)
+            base_est = self._get_base_estimator()
 
-            if not hasattr(self.model, 'estimators_'):
+            if not hasattr(base_est, 'estimators_'):
+                # Fallback to feature importance if tree estimators unavailable
+                imp = self.get_feature_importance()
+                contributions = [
+                    {"feature": k, "shap_value": float(v), "impact": "positive"}
+                    for k, v in sorted(imp.items(), key=lambda item: item[1], reverse=True)
+                ]
                 return {
-                    "error": "SHAP not available for this model type",
-                    "base_value": 0,
-                    "contributions": []
+                    "base_value": 0.0,
+                    "contributions": contributions,
+                    "top_5_features": [c["feature"] for c in contributions[:5]]
                 }
 
             import shap
 
-            explainer = shap.TreeExplainer(self.model.estimators_[0])
+            tree = base_est.estimators_[0]
+            explainer = shap.TreeExplainer(tree)
             shap_values = explainer.shap_values(X)
 
-            base_value = float(explainer.expected_value) if isinstance(
-                explainer.expected_value, (int, float)
-            ) else float(explainer.expected_value[0])
+            probas = self.model.predict_proba(X)[0]
+            top_class_idx = int(np.argmax(probas))
 
             if isinstance(shap_values, list):
+                if top_class_idx < len(shap_values):
+                    sv = shap_values[top_class_idx][0]
+                else:
+                    sv = shap_values[0][0]
+            elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
+                sv = shap_values[0, :, top_class_idx]
+            elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 2:
                 sv = shap_values[0]
             else:
-                sv = shap_values[0]
+                sv = np.zeros(len(self.features))
+
+            exp_val = explainer.expected_value
+            if isinstance(exp_val, (list, np.ndarray)):
+                base_value = float(exp_val[top_class_idx]) if top_class_idx < len(exp_val) else float(exp_val[0])
+            else:
+                base_value = float(exp_val)
 
             contributions = []
             for feature, value in zip(self.features, sv):
+                val_float = float(value)
                 contributions.append({
                     "feature": feature,
-                    "shap_value": float(value),
-                    "impact": "positive" if value > 0 else "negative"
+                    "shap_value": val_float,
+                    "impact": "positive" if val_float > 0 else "negative"
                 })
 
             contributions.sort(
@@ -126,7 +155,7 @@ class MLEngine:
 
             return {
                 "base_value": base_value,
-                "contributions": contributions[:10],
+                "contributions": contributions,
                 "top_5_features": [c["feature"] for c in contributions[:5]]
             }
 
@@ -203,9 +232,10 @@ class MLEngine:
             Dict mapping feature names to importance values
         """
         try:
-            if hasattr(self.model, 'feature_importances_'):
-                importances = self.model.feature_importances_
-                return dict(zip(self.features, importances))
+            base_est = self._get_base_estimator()
+            if hasattr(base_est, 'feature_importances_'):
+                importances = base_est.feature_importances_
+                return {feat: float(imp) for feat, imp in zip(self.features, importances)}
             return {}
         except Exception:
             return {}

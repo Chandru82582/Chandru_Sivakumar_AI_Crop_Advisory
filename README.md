@@ -202,79 +202,65 @@ The `data_ingestion.py` script handles:
 python data_ingestion.py
 ```
 
+### `core/plant_doctor.py`
+
+Computer vision leaf disease diagnosis and treatment recommendations.
+
+- Automatic pathology diagnosis from leaf images
+- Organic and chemical treatment protocols
+- Preventive agronomic practices
+
 ## Phase Development
 
-### ✅ Phase 2: Core Modules
+### ✅ All Phases Complete: Production Ready (v3.5)
 
-- ML Engine with SHAP
-- SQL Agent with Gemini
-- RAG Retriever (Hybrid)
-- Guardrails
-
-### Phase 3: Orchestration (Next)
-
-- LangChain agents for advisory generation
-- PDF report builder
-- Integration of all Phase 2 modules
-
-### Phase 4: API Gateway
-
-- FastAPI endpoints
-- Request/response handling
-- Model serving
-
-### Phase 5: UI
-
-- Streamlit dashboard
-- Interactive tabs
-- PDF download
+- **Phase 1: ML Model Training:** Calibrated ensemble crop recommender (`artifact/crop_recommender.joblib`).
+- **Phase 2: Core Intelligent Modules:** ML Engine with SHAP, RAG Retriever, SQL Agent, Guardrails, Plant Doctor.
+- **Phase 3: LangChain Orchestration:** Dynamic multi-stage advisory and companion planting engine.
+- **Phase 4: FastAPI Gateway:** REST API endpoints serving predictions, simulations, history, diagnosis, and PDF export (`api/main.py`).
+- **Phase 5: Reactive Streamlit UI:** Production unified dashboard with real-time What-If simulator, interactive timeline checklists, vision doctor, and analytics (`app.py`).
 
 ## Environment Variables
 
 ```bash
-GEMINI_API_KEY=<your-google-api-key>  # Required for SQL queries via LLM
+GEMINI_API_KEY=<your-google-api-key>  # For LLM queries and advisory generation
+# Note: The platform also includes comprehensive agronomic fallbacks if API key is not present.
 ```
 
-## Dependencies
+## Running the Application
 
-See `requirements.txt` for full list. Key packages:
+### 🌾 Streamlit Production UI
 
-- **LangChain:** `langchain`, `langchain-community`, `langchain-google-genai`
-- **RAG:** `chromadb`, `sentence-transformers`, `rank-bm25`
-- **ML:** `xgboost`, `scikit-learn`, `shap`
-- **Data:** `pandas`, `sqlalchemy`
-- **API:** `fastapi`, `uvicorn`
-- **UI:** `streamlit`
+```bash
+streamlit run app.py
+```
+
+*Access at: `http://localhost:8501`*
+
+### ⚡ FastAPI Gateway
+
+```bash
+uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+*Interactive Swagger docs at: `http://localhost:8000/docs`*
 
 ## Testing
 
-Run the test suite:
+Run the module test suite:
 
 ```bash
-python test_phase2.py
+python test_files/test_phase2.py
 ```
 
 Tests cover:
 
-- ML predictions
-- RAG document retrieval
-- SQL agent operations
-- Guardrails validation
-
-## Development Notes
-
-1. **ChromaDB Persistence:** Vector store is persisted at `data/chroma_db/` for fast re-initialization.
-2. **SQLite Database:** Auto-initializes on first run with crop_history schema.
-3. **LLM Integration:** Requires GEMINI_API_KEY in environment for semantic SQL translation.
-4. **Feature Standardization:** All numeric features should be normalized before prediction.
-
-## Next Steps
-
-1. Implement Phase 3 orchestration layer
-2. Add API endpoints (Phase 4)
-3. Build Streamlit UI (Phase 5)
-4. End-to-end testing and deployment
+- ML predictions & SHAP explainability
+- Hybrid RAG document retrieval (BM25 + Vector)
+- SQL agent operations & stats
+- Safety guardrails validation
+- Plant Doctor vision diagnosis
 
 ---
 
-**Status:** Phase 2 Complete | Phase 3 In Progress
+**Status:** Complete & Production Ready 🌾
