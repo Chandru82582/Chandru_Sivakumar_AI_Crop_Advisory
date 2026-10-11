@@ -68,9 +68,9 @@ STATE_ALIASES: dict[str, str] = {}
 BASELINE: str = "baseline_prior"
 LOOKUP: str = "state_season_lookup"
 
-YIELD_PATH: Path = Path(r"d:\CropAdvisory\dataAnalysis\data\crop_yield.csv")
-SOIL_PATH: Path = Path(r"d:\CropAdvisory\dataAnalysis\data\state_soil_data.csv")
-WEATHER_PATH: Path = Path(r"d:\CropAdvisory\dataAnalysis\data\state_weather_data_1997_2020.csv")
+YIELD_PATH: Path = Path(r"d:\CropAdvisory\data\raw\crop_yield.csv")
+SOIL_PATH: Path = Path(r"d:\CropAdvisory\data\raw\state_soil_data.csv")
+WEATHER_PATH: Path = Path(r"d:\CropAdvisory\data\raw\state_weather_data_1997_2020.csv")
 
 
 @dataclass(frozen=True)

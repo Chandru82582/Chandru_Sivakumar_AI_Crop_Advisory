@@ -31,8 +31,8 @@ class DataIngestionPipeline:
 
     def __init__(
         self,
-        pdf_dir: str = "dataAnalysis/agronomy_docs",
-        csv_dir: str = "dataAnalysis/data",
+        pdf_dir: str = "data/agronomy_docs",
+        csv_dir: str = "data/raw",
         db_path: str = "data/farmer_profile.db",
         chroma_path: str = "data/chroma_db",
         chunk_size: int = 1000,

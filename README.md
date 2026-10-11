@@ -73,7 +73,7 @@ result = engine.predict({
 
 Hybrid RAG system combining sparse (BM25) and dense (embeddings) retrieval.
 
-- Loads PDFs from `dataAnalysis/agronomy_docs/`
+- Loads PDFs from `data/agronomy_docs/`
 - Stores documents in ChromaDB vector store
 - BM25 + Dense embedding ensemble retrieval
 - Persistent storage for fast re-initialization
@@ -135,7 +135,7 @@ safe_text = AdvisoryGuardrails.sanitize_advisory_text(advisory)
 ### Documents (ChromaDB)
 
 - **Storage:** `data/chroma_db/`
-- **Source:** PDFs from `dataAnalysis/agronomy_docs/`
+- **Source:** PDFs from `data/agronomy_docs/`
 - **Processing:**
   - PyPDFDirectoryLoader for PDF extraction
   - RecursiveCharacterTextSplitter (chunk_size=1000, overlap=200)
@@ -166,14 +166,15 @@ D:\CropAdvisory/
 │   ├── sql_agent.py           # NL-SQL via Gemini
 │   └── guardrails.py          # Safety & validation
 ├── data/
+│   ├── agronomy_docs/         # 4 PDF documents
+│   ├── raw/                   # Training CSV files
 │   ├── farmer_profile.db      # SQLite (auto-created)
 │   ├── chroma_db/             # Vector store (auto-created)
 │   └── (other data files)
 ├── artifact/
 │   └── crop_recommender.joblib  # Trained ML model
 ├── dataAnalysis/
-│   ├── agronomy_docs/         # 4 PDF documents
-│   └── data/                  # Training CSV files
+│   └── CropData.ipynb         # Exploratory data analysis notebook
 ├── data_ingestion.py          # PDF + tabular data loader
 ├── requirements.txt
 ├── README.md
@@ -186,13 +187,13 @@ The `data_ingestion.py` script handles:
 
 1. **PDF Processing:**
 
-   - Loads all PDFs from `dataAnalysis/agronomy_docs/`
+   - Loads all PDFs from `data/agronomy_docs/`
    - Chunks using RecursiveCharacterTextSplitter
    - Embeds with HuggingFace (all-MiniLM-L6-v2)
    - Stores in ChromaDB
 2. **Tabular Data:**
 
-   - Reads CSV files from `dataAnalysis/data/`
+   - Reads CSV files from `data/raw/`
    - Creates SQLite database
    - Initializes crop_history table
 

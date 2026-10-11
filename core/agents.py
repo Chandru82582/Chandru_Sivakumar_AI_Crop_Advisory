@@ -26,7 +26,7 @@ class AdvisoryOrchestrator:
     def __init__(
         self,
         model_path: str = "artifact/crop_recommender.joblib",
-        docs_path: str = "dataAnalysis/agronomy_docs",
+        docs_path: str = "data/agronomy_docs",
         db_path: str = "data/farmer_profile.db",
         ml_engine: Optional[MLEngine] = None,
         retriever: Optional[RAGRetriever] = None,

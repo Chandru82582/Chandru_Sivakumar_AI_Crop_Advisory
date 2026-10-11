@@ -980,7 +980,7 @@ def main():
 
         if app_view == "🌾 Farmer Advisory Portal":
             st.markdown(f"<h4 style='color:{PRIMARY};margin-top:0;'>⚙️ Field & Soil Parameters</h4>", unsafe_allow_html=True)
-            st.caption("Default state set to **Tamil Nadu** (dataAnalysis/data baseline).")
+            st.caption("Default state set to **Tamil Nadu** (data/raw baseline).")
 
             # Tamil Nadu District / Zone Presets
             tn_district = st.selectbox(
@@ -995,7 +995,7 @@ def main():
                 index=0
             )
 
-            # Presets calibrated against dataAnalysis/data state_soil_data.csv and state_weather_data_1997_2020.csv
+            # Presets calibrated against data/raw state_soil_data.csv and state_weather_data_1997_2020.csv
             preset_defaults = {
                 "Cauvery Delta (Thanjavur, Tiruvarur, Nagapattinam)": {"n": 80, "p": 38, "k": 30, "ph": 6.6, "temp": 28.0, "rain": 1200, "hum": 72, "loc": "Thanjavur, Tamil Nadu"},
                 "Western Zone (Coimbatore, Erode, Tiruppur)": {"n": 75, "p": 35, "k": 28, "ph": 6.5, "temp": 27.5, "rain": 750, "hum": 68, "loc": "Coimbatore, Tamil Nadu"},
@@ -2260,7 +2260,7 @@ def main():
                 st.markdown(doc_descriptions.get(sel_doc_name, "Document metadata available."))
 
             else:
-                st.info("No policy documents found in dataAnalysis/agronomy_docs.")
+                st.info("No policy documents found in data/agronomy_docs.")
 
         with sys_tab3:
             st.markdown("### 🔍 RAG Retrieval & Relevance Verification Sandbox")
@@ -2385,7 +2385,7 @@ def main():
                 - **Model Artifact:** `artifact/crop_recommender.joblib`
                 - **Features:** `{', '.join(model_info.get('feature_names', []))}`
                 - **XAI Engine:** SHAP TreeExplainer with base probability attributions
-                - **Training Data Scope:** `dataAnalysis/data/crop_yield.csv` (19,689 records), `state_soil_data.csv`, `state_weather_data_1997_2020.csv`
+                - **Training Data Scope:** `data/raw/crop_yield.csv` (19,689 records), `state_soil_data.csv`, `state_weather_data_1997_2020.csv`
                 """)
 
             st.markdown("#### 🌾 Supported Crop Classes")

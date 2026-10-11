@@ -36,7 +36,7 @@ class RAGRetriever:
 
     def __init__(
         self,
-        docs_path: str = "dataAnalysis/agronomy_docs",
+        docs_path: str = "data/agronomy_docs",
         chroma_path: str = "data/chroma_db",
         chunk_size: int = 1000,
         chunk_overlap: int = 200
