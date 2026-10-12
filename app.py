@@ -959,9 +959,7 @@ def main():
             <div class="brand-title">🌾 AgriAdvisory AI Platform</div>
             <div class="brand-subtitle">Smart Crop Intelligence • Interactive Cultivation Calendar • Vision Diagnostics • Observability Hub</div>
         </div>
-        <div>
-            <span class="brand-tag">Tamil Nadu Edition • v3.6</span>
-        </div>
+       
     </div>
     """, unsafe_allow_html=True)
 
