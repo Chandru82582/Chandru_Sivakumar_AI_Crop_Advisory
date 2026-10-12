@@ -185,6 +185,12 @@ class HistoryQuery(BaseModel):
     query: str
 
 
+class ChatQueryInput(BaseModel):
+    """Chat query input for domain guardrail validation."""
+    query: str
+    farmer_name: Optional[str] = "Farmer"
+
+
 class FarmRecordInput(BaseModel):
     """Farm record input."""
     season: str
@@ -247,11 +253,40 @@ async def simulate(request: SimulateRequest):
 async def farm_history(query: HistoryQuery):
     """Query farm history using natural language."""
     try:
+        grd = get_guardrails()
+        is_agri, reason = grd.is_agricultural_query(query.query)
+        if not is_agri:
+            return {
+                "status": "blocked",
+                "is_agricultural": False,
+                "reason": reason,
+                "summary": grd.get_non_agricultural_refusal(query=query.query),
+                "results": []
+            }
+
         sql = get_sql_agent()
         result = sql.ask_farm_history(query.query)
         return result
     except Exception as e:
         logger.error(f"History query failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/chat/validate")
+async def validate_chat_query(payload: ChatQueryInput):
+    """Validate whether a chat query is within the agricultural domain."""
+    try:
+        grd = get_guardrails()
+        is_agri, reason = grd.is_agricultural_query(payload.query)
+        refusal = grd.get_non_agricultural_refusal(payload.farmer_name, payload.query) if not is_agri else None
+        return {
+            "status": "success",
+            "is_agricultural": is_agri,
+            "reason": reason,
+            "refusal_message": refusal
+        }
+    except Exception as e:
+        logger.error(f"Chat validation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

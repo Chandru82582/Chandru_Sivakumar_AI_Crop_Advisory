@@ -40,6 +40,7 @@ from core.sql_agent import FarmHistoryAgent
 from core.agents import AdvisoryOrchestrator
 from core.pdf_builder import PDFReportBuilder
 from core.plant_doctor import PlantDoctor
+from core.guardrails import AdvisoryGuardrails
 
 # ==========================================
 # PAGE CONFIGURATION
@@ -730,6 +731,17 @@ def query_farm_assistant(
     """
     q_lower = query.lower()
     
+    # 0. Agricultural Domain Guardrail: Block non-agricultural questions
+    is_agri, reason = AdvisoryGuardrails.is_agricultural_query(query, llm=llm)
+    if not is_agri:
+        refusal = AdvisoryGuardrails.get_non_agricultural_refusal(farmer_name=farmer_name, query=query)
+        return {
+            "answer": refusal,
+            "sql_info": None,
+            "blocked_by_guardrail": True,
+            "guardrail_reason": reason
+        }
+
     # 1. Fetch real historical facts from SQLite
     history_records = sql_agent.ask_farm_history("SELECT * FROM crop_history")
     rows = history_records.get("results", [])
@@ -932,6 +944,16 @@ Instructions:
             f"- **Preventive Bio-Spray:** Spray **5% Neem Seed Kernel Extract (NSKE)** or Azadirachtin (2 ml/L) every 15 days in early morning.\n"
             f"- **Traps & Monitoring:** Install **6-8 yellow sticky traps per acre** for whiteflies/thrips and **4 pheromone traps** for stem borer.\n"
             f"- **Foliar Disease:** If leaf blast or blight spots appear, apply *Pseudomonas fluorescens* @ 2.5 kg/ha or Tricyclazole 75 WP @ 120 g/acre."
+        )
+    elif any(k in q_lower for k in ["vanakkam", "hello", "hi", "help", "who are you", "what can you do"]):
+        ans = (
+            f"🌾 **Vanakkam {farmer_name}!**\n\n"
+            f"I am your dedicated **Agricultural Field Assistant & Agronomy Advisor** for your **{top_crop}** plot in Tamil Nadu.\n\n"
+            f"**How can I help with your farming operations today?**\n"
+            f"- 🌾 Inquire about optimal fertilizer splits (Urea, DAP, MOP) tailored to your soil test values\n"
+            f"- 📅 Check your next upcoming field operation, weeding stage, or AWD water management\n"
+            f"- 🐛 Request organic IPM solutions and biological defenses against leaf blast or stem borer\n"
+            f"- 📜 Review your farm's past harvest records and highest profit seasons"
         )
     else:
         ans = (
@@ -1774,7 +1796,9 @@ def main():
                     avatar_icon = "🧑‍🌾" if is_user else "🌱"
                     with st.chat_message(msg["role"], avatar=avatar_icon):
                         st.markdown(msg["content"])
-                        if msg.get("sql_info"):
+                        if msg.get("blocked_by_guardrail"):
+                            st.caption("🛡️ Intercepted by Agricultural Domain Guardrail")
+                        elif msg.get("sql_info"):
                             with st.expander("🔍 Verified Database Grounding", expanded=False):
                                 st.caption(msg["sql_info"])
                         if msg.get("timestamp"):
@@ -1835,11 +1859,14 @@ def main():
 
                     ans_text = resp_dict["answer"]
                     sql_meta = resp_dict.get("sql_info")
+                    is_blocked = resp_dict.get("blocked_by_guardrail", False)
                     resp_time = datetime.now().strftime("%I:%M %p")
 
                     with st.chat_message("assistant", avatar="🌱"):
                         st.markdown(ans_text)
-                        if sql_meta:
+                        if is_blocked:
+                            st.caption("🛡️ Intercepted by Agricultural Domain Guardrail")
+                        elif sql_meta:
                             with st.expander("🔍 Verified Database Grounding", expanded=False):
                                 st.caption(sql_meta)
                         st.caption(f"🕒 {resp_time}")
@@ -1848,6 +1875,7 @@ def main():
                     "role": "assistant",
                     "content": ans_text,
                     "sql_info": sql_meta,
+                    "blocked_by_guardrail": is_blocked,
                     "timestamp": resp_time
                 })
                 st.rerun()
